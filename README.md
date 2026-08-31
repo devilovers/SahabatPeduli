@@ -73,7 +73,6 @@ Sesuaikan konfigurasi koneksi database pada file config/database.php.
 ### 3. Run Project
 Pindahkan folder proyek ke dalam folder server lokal Anda (htdocs untuk XAMPP atau www untuk Laragon), lalu buka melalui browser:
 
-Plaintext
 http://localhost/PeduliUmat
 
 ## Author
