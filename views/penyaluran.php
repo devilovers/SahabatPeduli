@@ -20,7 +20,7 @@ $distributions = $stmtDistributions->fetchAll();
             <span class="text-brand-600 dark:text-brand-400 font-bold text-sm uppercase tracking-wider">Transparansi Penyaluran</span>
             <h1 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">Peta Sebaran Penyaluran Dana</h1>
             <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base">
-                Setiap donasi yang Anda percayakan disalurkan secara terbuka dan akuntabel. Pantau sebaran program bantuan PeduliUmat di berbagai wilayah.
+                Setiap donasi yang Anda percayakan disalurkan secara terbuka dan akuntabel. Pantau sebaran program bantuan SahabatPeduli di berbagai wilayah.
             </p>
         </div>
 

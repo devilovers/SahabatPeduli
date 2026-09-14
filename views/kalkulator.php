@@ -43,17 +43,17 @@ $nisabBulanan = $nisabTahunan / 12;
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Pendapatan Utama per Bulan (Rp)</label>
-                        <input type="number" id="gajiBulan" oninput="hitungZakatProfesi()" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="cth. 7000000">
+                        <input type="text" id="gajiBulan" onkeyup="formatInputRupiah(this); hitungZakatProfesi();" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="cth. 7.000.000">
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Pendapatan Tambahan / Bonus per Bulan (Rp)</label>
-                        <input type="number" id="bonusBulan" oninput="hitungZakatProfesi()" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="cth. 1000000" value="0">
+                        <input type="text" id="bonusBulan" onkeyup="formatInputRupiah(this); hitungZakatProfesi();" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="cth. 1.000.000" value="0">
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Kebutuhan Pokok / Hutang Jatuh Tempo per Bulan (Rp)</label>
-                        <input type="number" id="pengeluaranBulan" oninput="hitungZakatProfesi()" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="cth. 2000000" value="0">
+                        <input type="text" id="pengeluaranBulan" onkeyup="formatInputRupiah(this); hitungZakatProfesi();" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="cth. 2.000.000" value="0">
                     </div>
                 </div>
 
@@ -65,12 +65,12 @@ $nisabBulanan = $nisabTahunan / 12;
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Total Uang Tabungan / Deposito / Perhiasan Emas (Rp)</label>
-                        <input type="number" id="totalHarta" oninput="hitungZakatMaal()" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="cth. 100000000">
+                        <input type="text" id="totalHarta" onkeyup="formatInputRupiah(this); hitungZakatMaal();" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="cth. 100.000.000">
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Hutang / Kewajiban yang Harus Dibayar (Rp)</label>
-                        <input type="number" id="hutangMaal" oninput="hitungZakatMaal()" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="cth. 5000000" value="0">
+                        <input type="text" id="hutangMaal" onkeyup="formatInputRupiah(this); hitungZakatMaal();" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="cth. 5.000.000" value="0">
                     </div>
                     <p class="text-xs text-slate-400 dark:text-slate-400 italic">*Harta telah mengendap/tersimpan selama 1 tahun (Haul).</p>
                 </div>
@@ -99,7 +99,7 @@ $nisabBulanan = $nisabTahunan / 12;
                 </div>
 
                 <div class="space-y-3">
-                    <a id="btnBayarZakat" href="/PeduliUmat/views/donasi.php?type=zakat&amount=0" class="block w-full py-4 text-center rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-lg shadow-brand-600/30 transition-all">
+                    <a id="btnBayarZakat" href="/SahabatPeduli/views/donasi.php?type=zakat&amount=0" class="block w-full py-4 text-center rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-lg shadow-brand-600/30 transition-all">
                         Tunaikan Zakat Sekarang
                     </a>
                     <p class="text-[11px] text-slate-400 dark:text-slate-400 text-center">
@@ -117,6 +117,20 @@ $nisabBulanan = $nisabTahunan / 12;
 const nisabBulanan = <?= $nisabBulanan; ?>;
 const nisabTahunan = <?= $nisabTahunan; ?>;
 let activeTab = 'profesi';
+
+function formatInputRupiah(element) {
+    let rawValue = element.value.replace(/[^0-9]/g, '');
+    if (rawValue) {
+        element.value = parseInt(rawValue, 10).toLocaleString('id-ID');
+    } else {
+        element.value = '';
+    }
+}
+
+function getCleanNumber(elementId) {
+    const val = document.getElementById(elementId).value.replace(/[^0-9]/g, '');
+    return parseFloat(val) || 0;
+}
 
 function switchTab(tab) {
     activeTab = tab;
@@ -144,9 +158,9 @@ function switchTab(tab) {
 }
 
 function hitungZakatProfesi() {
-    const gaji = parseFloat(document.getElementById('gajiBulan').value) || 0;
-    const bonus = parseFloat(document.getElementById('bonusBulan').value) || 0;
-    const pengeluaran = parseFloat(document.getElementById('pengeluaranBulan').value) || 0;
+    const gaji = getCleanNumber('gajiBulan');
+    const bonus = getCleanNumber('bonusBulan');
+    const pengeluaran = getCleanNumber('pengeluaranBulan');
 
     const bersih = (gaji + bonus) - pengeluaran;
     const statusNisab = document.getElementById('statusNisab');
@@ -158,18 +172,18 @@ function hitungZakatProfesi() {
         statusNisab.innerText = "Wajib Zakat (Mencapai Nisab)";
         statusNisab.className = "font-bold text-emerald-600 dark:text-emerald-400";
         textHasilZakat.innerText = "Rp " + Math.round(zakat).toLocaleString('id-ID');
-        btnBayarZakat.href = "/PeduliUmat/views/donasi.php?type=zakat&amount=" + Math.round(zakat);
+        btnBayarZakat.href = "/SahabatPeduli/views/donasi.php?type=zakat&amount=" + Math.round(zakat);
     } else {
         statusNisab.innerText = "Belum Wajib Zakat";
         statusNisab.className = "font-bold text-amber-600 dark:text-amber-400";
         textHasilZakat.innerText = "Rp 0";
-        btnBayarZakat.href = "/PeduliUmat/views/donasi.php?type=zakat&amount=0";
+        btnBayarZakat.href = "/SahabatPeduli/views/donasi.php?type=zakat&amount=0";
     }
 }
 
 function hitungZakatMaal() {
-    const totalHarta = parseFloat(document.getElementById('totalHarta').value) || 0;
-    const hutang = parseFloat(document.getElementById('hutangMaal').value) || 0;
+    const totalHarta = getCleanNumber('totalHarta');
+    const hutang = getCleanNumber('hutangMaal');
 
     const bersih = totalHarta - hutang;
     const statusNisab = document.getElementById('statusNisab');
@@ -181,12 +195,12 @@ function hitungZakatMaal() {
         statusNisab.innerText = "Wajib Zakat (Mencapai Nisab)";
         statusNisab.className = "font-bold text-emerald-600 dark:text-emerald-400";
         textHasilZakat.innerText = "Rp " + Math.round(zakat).toLocaleString('id-ID');
-        btnBayarZakat.href = "/PeduliUmat/views/donasi.php?type=zakat&amount=" + Math.round(zakat);
+        btnBayarZakat.href = "/SahabatPeduli/views/donasi.php?type=zakat&amount=" + Math.round(zakat);
     } else {
         statusNisab.innerText = "Belum Wajib Zakat";
         statusNisab.className = "font-bold text-amber-600 dark:text-amber-400";
         textHasilZakat.innerText = "Rp 0";
-        btnBayarZakat.href = "/PeduliUmat/views/donasi.php?type=zakat&amount=0";
+        btnBayarZakat.href = "/SahabatPeduli/views/donasi.php?type=zakat&amount=0";
     }
 }
 </script>

@@ -62,7 +62,7 @@ $saldo = $totalIn - $totalOut;
             <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
                 <div>
                     <h2 class="font-extrabold text-slate-900 dark:text-white text-xl">Arsip Dokumen Laporan (PDF)</h2>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Unduh berkas laporan bulanan dan tahunan resmi PeduliUmat.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Unduh berkas laporan bulanan dan tahunan resmi SahabatPeduli.</p>
                 </div>
                 <div class="flex gap-2">
                     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
@@ -90,7 +90,7 @@ $saldo = $totalIn - $totalOut;
                                 </p>
                             </div>
 
-                            <a href="/PeduliUmat/uploads/reports/<?= htmlspecialchars($item['file_path']); ?>" download class="w-full py-2.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-brand-600 dark:hover:bg-brand-500 hover:text-white dark:hover:text-white hover:border-brand-600 dark:hover:border-brand-500 font-bold text-xs text-slate-700 dark:text-slate-200 text-center transition-all flex items-center justify-center gap-2">
+                            <a href="/SahabatPeduli/uploads/reports/<?= htmlspecialchars($item['file_path']); ?>" download class="w-full py-2.5 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-brand-600 dark:hover:bg-brand-500 hover:text-white dark:hover:text-white hover:border-brand-600 dark:hover:border-brand-500 font-bold text-xs text-slate-700 dark:text-slate-200 text-center transition-all flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-file-pdf text-red-500 group-hover:text-white"></i>
                                 <span>Unduh Dokumen Laporan</span>
                             </a>

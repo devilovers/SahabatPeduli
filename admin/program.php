@@ -3,7 +3,7 @@ session_start();
 require_once __DIR__ . '/../config/database.php';
 
 if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
-    header("Location: /PeduliUmat/auth/login.php");
+    header("Location: /SahabatPeduli/auth/login.php");
     exit;
 }
 
@@ -87,146 +87,200 @@ $campaigns = $stmtCampaigns->fetchAll();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $page_title; ?> - Admin PeduliUmat</title>
+    <title><?= $page_title; ?> - Admin SahabatPeduli</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
                         brand: {
-                            50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981', 600: '#059669', 700: '#047857'
+                            50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857'
                         }
                     }
                 }
             }
         }
     </script>
+    <script>
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
 </head>
-<body class="bg-slate-100 font-sans text-slate-800 antialiased">
+<body class="bg-white dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 antialiased selection:bg-brand-500 selection:text-white min-h-screen flex flex-col transition-colors duration-300">
 
-<div class="min-h-screen flex flex-col md:flex-row">
+<!-- Header Mobile Top Bar -->
+<header class="md:hidden sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md">
+            <i class="fa-solid fa-hand-holding-heart text-lg"></i>
+        </div>
+        <span class="font-black text-slate-900 dark:text-white text-base">Sahabat<span class="text-brand-600 dark:text-brand-400">Peduli</span></span>
+    </div>
+    <div class="flex items-center gap-2">
+        <button onclick="toggleTheme()" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+            <i class="mobileThemeIcon fa-solid fa-moon"></i>
+        </button>
+        <button id="mobileMenuBtn" onclick="toggleSidebar()" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+    </div>
+</header>
 
-    <aside class="w-full md:w-64 bg-slate-900 text-slate-300 flex-shrink-0">
-        <div class="p-6 border-b border-slate-800 flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center font-black">P</div>
-            <div>
-                <h1 class="font-extrabold text-white text-base">PeduliUmat</h1>
-                <span class="text-[10px] text-brand-500 font-bold uppercase tracking-wider">Panel Admin</span>
+<div class="min-h-screen flex flex-col md:flex-row relative bg-white dark:bg-slate-950">
+
+    <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 hidden md:hidden transition-opacity"></div>
+
+    <!-- Sidebar Admin -->
+    <aside id="sidebarNav" class="fixed md:sticky top-0 left-0 z-50 w-72 md:w-64 h-screen bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 flex-shrink-0 flex flex-col justify-between border-r border-slate-200 dark:border-slate-800/80 -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div>
+            <!-- Logo SahabatPeduli -->
+            <div class="p-6 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+                        <i class="fa-solid fa-hand-holding-heart text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-black text-slate-900 dark:text-white text-lg tracking-tight leading-none">Sahabat<span class="text-brand-600 dark:text-brand-400">Peduli</span></h1>
+                        <span class="text-[10px] text-brand-600 dark:text-brand-400 font-bold tracking-wider uppercase flex items-center gap-1 mt-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span> Admin Panel
+                        </span>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
+
+            <!-- Menus -->
+            <nav class="p-4 space-y-1.5 text-xs font-bold">
+                <a href="/SahabatPeduli/admin/index.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+                    <i class="fa-solid fa-chart-line w-4"></i> Dashboard
+                </a>
+                <a href="/SahabatPeduli/admin/donasi.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+                    <i class="fa-solid fa-hand-holding-dollar w-4"></i> Kelola Donasi
+                </a>
+                <a href="/SahabatPeduli/admin/program.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
+                    <i class="fa-solid fa-folder-open w-4"></i> Kelola Program
+                </a>
+                <a href="/SahabatPeduli/admin/penyaluran.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+                    <i class="fa-solid fa-map-location-dot w-4"></i> Titik Penyaluran
+                </a>
+                <a href="/SahabatPeduli/admin/berita.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+                    <i class="fa-solid fa-newspaper w-4"></i> Kelola Berita
+                </a>
+                <a href="/SahabatPeduli/admin/laporan.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+                    <i class="fa-solid fa-file-invoice w-4"></i> Kelola Laporan
+                </a>
+            </nav>
         </div>
 
-        <nav class="p-4 space-y-1 text-xs font-semibold">
-            <a href="/PeduliUmat/admin/index.php" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all">
-                <i class="fa-solid fa-chart-line w-4"></i> Dashboard
-            </a>
-            <a href="/PeduliUmat/admin/donasi.php" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all">
-                <i class="fa-solid fa-hand-holding-dollar w-4"></i> Kelola Donasi
-            </a>
-            <a href="/PeduliUmat/admin/program.php" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-600 text-white font-bold">
-                <i class="fa-solid fa-folder-open w-4"></i> Kelola Program
-            </a>
-            <a href="/PeduliUmat/admin/penyaluran.php" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all">
-                <i class="fa-solid fa-map-location-dot w-4"></i> Titik Penyaluran
-            </a>
-            <a href="/PeduliUmat/admin/berita.php" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all">
-                <i class="fa-solid fa-newspaper w-4"></i> Kelola Berita
-            </a>
-            <a href="/PeduliUmat/admin/laporan.php" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all">
-                <i class="fa-solid fa-file-invoice w-4"></i> Kelola Laporan
-            </a>
+        <div class="p-4 border-t border-slate-100 dark:border-slate-800/80 space-y-1 text-xs font-semibold">
+            <button id="themeToggleBtn" onclick="toggleTheme()" class="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+                <span class="flex items-center gap-3">
+                    <i id="themeIcon" class="fa-solid fa-moon w-4"></i>
+                    <span id="themeText">Mode Gelap</span>
+                </span>
+            </button>
 
-            <div class="pt-6 mt-6 border-t border-slate-800 space-y-1">
-                <a href="/PeduliUmat/index.php" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
-                    <i class="fa-solid fa-globe w-4"></i> Lihat Situs Utama
-                </a>
-                <a href="/PeduliUmat/auth/logout.php" class="flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 hover:bg-rose-900/30 hover:text-rose-300 transition-all">
-                    <i class="fa-solid fa-right-from-bracket w-4"></i> Keluar
-                </a>
-            </div>
-        </nav>
+            <a href="/SahabatPeduli/index.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
+                <i class="fa-solid fa-globe w-4"></i> Lihat Situs Utama
+            </a>
+            <a href="/SahabatPeduli/auth/logout.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all">
+                <i class="fa-solid fa-right-from-bracket w-4"></i> Keluar
+            </a>
+        </div>
     </aside>
 
-    <main class="flex-1 p-6 lg:p-10 space-y-8 overflow-y-auto">
+    <!-- Main Content Area -->
+    <main class="flex-1 bg-white dark:bg-slate-950 py-8 px-4 sm:px-8 lg:px-12 overflow-y-auto space-y-8 sm:space-y-10 transition-colors duration-300">
 
         <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-                <h1 class="text-2xl font-black text-slate-900">Kelola Program Peduli</h1>
-                <p class="text-xs text-slate-500 mt-1">Buat program kebaikan baru dan pantau target donasi yang terkumpul.</p>
+                <span class="text-brand-600 dark:text-brand-400 font-bold text-xs uppercase tracking-wider">Penggalangan Dana</span>
+                <h1 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">Kelola Program Peduli</h1>
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Buat program kebaikan baru dan pantau target donasi yang terkumpul.</p>
             </div>
-            <button onclick="document.getElementById('modalCreate').classList.remove('hidden')" class="px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/20 transition-all flex items-center justify-center gap-2 self-start sm:self-auto">
+            <button onclick="document.getElementById('modalCreate').classList.remove('hidden')" class="px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-lg shadow-brand-600/30 transition-all flex items-center justify-center gap-2 self-start sm:self-auto active:scale-95">
                 <i class="fa-solid fa-plus"></i> Tambah Program Baru
             </button>
         </div>
 
         <?php if (!empty($success_msg)): ?>
-            <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-2xl text-xs flex items-center gap-2">
-                <i class="fa-solid fa-circle-check"></i> <?= htmlspecialchars($success_msg); ?>
+            <div class="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 px-4 py-3 rounded-2xl text-xs flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400"></i> <?= htmlspecialchars($success_msg); ?>
             </div>
         <?php endif; ?>
 
         <?php if (!empty($error_msg)): ?>
-            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-xs flex items-center gap-2">
-                <i class="fa-solid fa-circle-exclamation"></i> <?= htmlspecialchars($error_msg); ?>
+            <div class="bg-red-50 dark:bg-rose-950/40 border border-red-200 dark:border-rose-800 text-red-800 dark:text-rose-300 px-4 py-3 rounded-2xl text-xs flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-circle-exclamation text-red-600 dark:text-rose-400"></i> <?= htmlspecialchars($error_msg); ?>
             </div>
         <?php endif; ?>
 
-        <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <!-- Table Data -->
+        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse min-w-[600px]">
                     <thead>
-                        <tr class="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                            <th class="py-3.5 px-4">Program</th>
-                            <th class="py-3.5 px-4">Kategori</th>
-                            <th class="py-3.5 px-4">Terkumpul / Target</th>
-                            <th class="py-3.5 px-4">Batas Waktu</th>
-                            <th class="py-3.5 px-4">Status</th>
-                            <th class="py-3.5 px-4 text-center">Aksi</th>
+                        <tr class="bg-white dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-[11px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider">
+                            <th class="py-4 px-6">Program</th>
+                            <th class="py-4 px-6">Kategori</th>
+                            <th class="py-4 px-6">Terkumpul / Target</th>
+                            <th class="py-4 px-6">Batas Waktu</th>
+                            <th class="py-4 px-6">Status</th>
+                            <th class="py-4 px-6 text-center">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs text-slate-700 dark:text-slate-300">
                         <?php if (!empty($campaigns)): ?>
                             <?php foreach ($campaigns as $camp): 
                                 $target = floatval($camp['target_amount']);
                                 $collected = floatval($camp['collected_amount']);
                                 $percent = ($target > 0) ? min(100, round(($collected / $target) * 100)) : 0;
                             ?>
-                                <tr class="hover:bg-slate-50/80 transition-colors">
-                                    <td class="py-4 px-4">
+                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                    <td class="py-4 px-6">
                                         <div class="flex items-center gap-3">
-                                            <img src="/PeduliUmat/uploads/campaigns/<?= htmlspecialchars($camp['image']); ?>" 
+                                            <img src="/SahabatPeduli/uploads/campaigns/<?= htmlspecialchars($camp['image']); ?>" 
                                                  alt="" 
-                                                 class="w-12 h-12 rounded-xl object-cover border border-slate-200"
+                                                 class="w-12 h-12 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm"
                                                  onerror="this.src='https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=150&auto=format&fit=crop';">
                                             <div>
-                                                <h4 class="font-bold text-slate-900 line-clamp-1"><?= htmlspecialchars($camp['title']); ?></h4>
-                                                <p class="text-[11px] text-slate-400 line-clamp-1 mt-0.5"><?= htmlspecialchars($camp['description']); ?></p>
+                                                <h4 class="font-bold text-slate-900 dark:text-white line-clamp-1"><?= htmlspecialchars($camp['title']); ?></h4>
+                                                <p class="text-[11px] text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5"><?= htmlspecialchars($camp['description']); ?></p>
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="py-4 px-4 font-bold text-brand-600 uppercase text-[11px]">
-                                        <?= str_replace('peduli_', '', $camp['category']); ?>
+                                    <td class="py-4 px-6 font-bold text-brand-600 dark:text-brand-400 uppercase text-[11px]">
+                                        <span class="px-2.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/50 border border-brand-200/60 dark:border-brand-800/60 inline-block">
+                                            <?= str_replace('peduli_', '', $camp['category']); ?>
+                                        </span>
                                     </td>
-                                    <td class="py-4 px-4">
-                                        <span class="font-bold text-slate-900">Rp <?= number_format($collected, 0, ',', '.'); ?></span>
-                                        <span class="text-slate-400 text-[11px] block">dari Rp <?= number_format($target, 0, ',', '.'); ?> (<?= $percent; ?>%)</span>
+                                    <td class="py-4 px-6">
+                                        <span class="font-bold text-slate-900 dark:text-white">Rp <?= number_format($collected, 0, ',', '.'); ?></span>
+                                        <span class="text-slate-400 dark:text-slate-500 text-[11px] block">dari Rp <?= number_format($target, 0, ',', '.'); ?> (<?= $percent; ?>%)</span>
                                     </td>
-                                    <td class="py-4 px-4 text-slate-500 font-semibold"><?= date('d M Y', strtotime($camp['end_date'])); ?></td>
-                                    <td class="py-4 px-4">
+                                    <td class="py-4 px-6 text-slate-500 dark:text-slate-400 font-semibold"><?= date('d M Y', strtotime($camp['end_date'])); ?></td>
+                                    <td class="py-4 px-6">
                                         <?php if ($camp['status'] === 'active'): ?>
-                                            <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">AKTIF</span>
+                                            <span class="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-[10px]">AKTIF</span>
                                         <?php else: ?>
-                                            <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px]">SELESAI</span>
+                                            <span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 font-bold text-[10px]">SELESAI</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="py-4 px-4 text-center">
+                                    <td class="py-4 px-6 text-center">
                                         <div class="inline-flex items-center gap-2">
                                             <form method="POST" action="">
                                                 <input type="hidden" name="action" value="toggle_status">
                                                 <input type="hidden" name="campaign_id" value="<?= $camp['id']; ?>">
                                                 <input type="hidden" name="status" value="<?= $camp['status'] === 'active' ? 'completed' : 'active'; ?>">
-                                                <button type="submit" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-all" title="Ubah Status">
+                                                <button type="submit" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition-all active:scale-95" title="Ubah Status">
                                                     <i class="fa-solid fa-rotate"></i>
                                                 </button>
                                             </form>
@@ -234,7 +288,7 @@ $campaigns = $stmtCampaigns->fetchAll();
                                             <form method="POST" action="" onsubmit="return confirm('Yakin ingin menghapus program ini?');">
                                                 <input type="hidden" name="action" value="delete_campaign">
                                                 <input type="hidden" name="campaign_id" value="<?= $camp['id']; ?>">
-                                                <button type="submit" class="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold transition-all" title="Hapus">
+                                                <button type="submit" class="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all active:scale-95" title="Hapus">
                                                     <i class="fa-solid fa-trash-can"></i>
                                                 </button>
                                             </form>
@@ -244,7 +298,7 @@ $campaigns = $stmtCampaigns->fetchAll();
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="6" class="text-center py-10 text-slate-400">Belum ada program peduli yang dibuat.</td>
+                                <td colspan="6" class="text-center py-12 text-slate-400 dark:text-slate-500 font-medium">Belum ada program peduli yang dibuat.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -255,11 +309,15 @@ $campaigns = $stmtCampaigns->fetchAll();
     </main>
 </div>
 
-<div id="modalCreate" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-            <h3 class="text-lg font-black text-slate-900">Buat Program Peduli Baru</h3>
-            <button onclick="document.getElementById('modalCreate').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-lg">
+<!-- Modal Create -->
+<div id="modalCreate" class="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 dark:border-slate-800">
+        <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div>
+                <h3 class="text-lg font-black text-slate-900 dark:text-white">Buat Program Peduli Baru</h3>
+                <p class="text-xs text-slate-400 dark:text-slate-500">Lengkapi detail penggalangan dana di bawah ini.</p>
+            </div>
+            <button onclick="document.getElementById('modalCreate').classList.add('hidden')" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-all">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
@@ -268,13 +326,13 @@ $campaigns = $stmtCampaigns->fetchAll();
             <input type="hidden" name="action" value="create_campaign">
 
             <div>
-                <label class="block text-slate-700 mb-1">Judul Program</label>
-                <input type="text" name="title" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="Contoh: Bantuan Sembako Yatim Banjarmasin">
+                <label class="block text-slate-700 dark:text-slate-300 mb-1">Judul Program</label>
+                <input type="text" name="title" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="Contoh: Bantuan Sembako Yatim Banjarmasin">
             </div>
 
             <div>
-                <label class="block text-slate-700 mb-1">Kategori Program</label>
-                <select name="category" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                <label class="block text-slate-700 dark:text-slate-300 mb-1">Kategori Program</label>
+                <select name="category" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
                     <option value="peduli_pendidikan">Peduli Pendidikan</option>
                     <option value="peduli_kesehatan">Peduli Kesehatan</option>
                     <option value="peduli_bencana">Peduli Bencana</option>
@@ -283,32 +341,71 @@ $campaigns = $stmtCampaigns->fetchAll();
             </div>
 
             <div>
-                <label class="block text-slate-700 mb-1">Target Nominal (Rp)</label>
-                <input type="number" name="target_amount" required min="100000" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="10000000">
+                <label class="block text-slate-700 dark:text-slate-300 mb-1">Target Nominal (Rp)</label>
+                <input type="number" name="target_amount" required min="100000" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="10000000">
             </div>
 
             <div>
-                <label class="block text-slate-700 mb-1">Batas Waktu Donasi</label>
-                <input type="date" name="end_date" required value="<?= date('Y-m-d', strtotime('+30 days')); ?>" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                <label class="block text-slate-700 dark:text-slate-300 mb-1">Batas Waktu Donasi</label>
+                <input type="date" name="end_date" required value="<?= date('Y-m-d', strtotime('+30 days')); ?>" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
             </div>
 
             <div>
-                <label class="block text-slate-700 mb-1">Gambar Sampul/Thumbnail</label>
-                <input type="file" name="image" accept="image/*" class="w-full px-4 py-2 rounded-xl border border-slate-200 text-slate-500">
+                <label class="block text-slate-700 dark:text-slate-300 mb-1">Gambar Sampul/Thumbnail</label>
+                <input type="file" name="image" accept="image/*" class="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 transition-all bg-white dark:bg-slate-800">
             </div>
 
             <div>
-                <label class="block text-slate-700 mb-1">Deskripsi Singkat Program</label>
-                <textarea name="description" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="Penjelasan mengenai target dan tujuan penggalangan dana..."></textarea>
+                <label class="block text-slate-700 dark:text-slate-300 mb-1">Deskripsi Singkat Program</label>
+                <textarea name="description" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="Penjelasan mengenai target dan tujuan penggalangan dana..."></textarea>
             </div>
 
-            <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
-                <button type="button" onclick="document.getElementById('modalCreate').classList.add('hidden')" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-all">Batal</button>
-                <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold transition-all shadow-md shadow-brand-500/20">Simpan Program</button>
+            <div class="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="document.getElementById('modalCreate').classList.add('hidden')" class="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition-all">Batal</button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold transition-all shadow-md shadow-brand-500/20 active:scale-95">Simpan Program</button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebarNav');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.toggle('-translate-x-full');
+    overlay.classList.toggle('hidden');
+}
+
+function updateThemeUI() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const icon = document.getElementById('themeIcon');
+    const text = document.getElementById('themeText');
+    const mobileIcons = document.querySelectorAll('.mobileThemeIcon');
+    
+    if (isDark) {
+        if (icon) icon.className = 'fa-solid fa-sun w-4 text-amber-400';
+        if (text) text.innerText = 'Mode Terang';
+        mobileIcons.forEach(i => i.className = 'mobileThemeIcon fa-solid fa-sun text-amber-400');
+    } else {
+        if (icon) icon.className = 'fa-solid fa-moon w-4 text-slate-400';
+        if (text) text.innerText = 'Mode Gelap';
+        mobileIcons.forEach(i => i.className = 'mobileThemeIcon fa-solid fa-moon');
+    }
+}
+
+function toggleTheme() {
+    if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+    } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+    }
+    updateThemeUI();
+}
+
+document.addEventListener('DOMContentLoaded', updateThemeUI);
+</script>
 
 </body>
 </html>

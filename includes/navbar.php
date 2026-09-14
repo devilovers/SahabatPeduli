@@ -6,12 +6,11 @@ $isLoggedIn = isset($_SESSION['user_id']);
 $userName   = $_SESSION['user_name'] ?? '';
 $userRole   = $_SESSION['user_role'] ?? 'muzakki';
 
-// Deteksi halaman aktif berdasarkan URL saat ini
 $currentUri = $_SERVER['REQUEST_URI'];
 function isActiveNav($path, $currentUri) {
     $parsedPath = parse_url($path, PHP_URL_PATH);
     $parsedUri  = parse_url($currentUri, PHP_URL_PATH);
-    if ($parsedPath === '/PeduliUmat/index.php' && ($parsedUri === '/PeduliUmat/' || $parsedUri === '/PeduliUmat/index.php')) {
+    if ($parsedPath === '/SahabatPeduli/index.php' && ($parsedUri === '/SahabatPeduli/' || $parsedUri === '/SahabatPeduli/index.php')) {
         return true;
     }
     return $parsedPath === $parsedUri;
@@ -22,24 +21,24 @@ function isActiveNav($path, $currentUri) {
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-20">
             
-            <a href="/PeduliUmat/index.php" class="flex items-center gap-3 group">
+            <a href="/SahabatPeduli/index.php" class="flex items-center gap-3 group">
                 <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
                     <i class="fa-solid fa-hand-holding-heart text-xl"></i>
                 </div>
                 <span class="font-extrabold text-xl text-slate-900 dark:text-white tracking-tight">
-                    Peduli<span class="text-brand-600">Umat</span>
+                    Sahabat<span class="text-brand-600">Peduli</span>
                 </span>
             </a>
 
             <nav class="hidden md:flex items-center gap-8 font-semibold text-sm text-slate-600 dark:text-slate-300 h-full">
                 <?php
                 $navItems = [
-                    ['url' => '/PeduliUmat/index.php', 'label' => 'Beranda'],
-                    ['url' => '/PeduliUmat/views/program.php', 'label' => 'Program Donasi'],
-                    ['url' => '/PeduliUmat/views/kalkulator.php', 'label' => 'Kalkulator Zakat'],
-                    ['url' => '/PeduliUmat/views/penyaluran.php', 'label' => 'Peta Penyaluran'],
-                    ['url' => '/PeduliUmat/views/berita.php', 'label' => 'Berita'],
-                    ['url' => '/PeduliUmat/views/laporan.php', 'label' => 'Laporan Transparansi'],
+                    ['url' => '/SahabatPeduli/index.php', 'label' => 'Beranda'],
+                    ['url' => '/SahabatPeduli/views/program.php', 'label' => 'Program'],
+                    ['url' => '/SahabatPeduli/views/kalkulator.php', 'label' => 'Kalkulator Zakat'],
+                    ['url' => '/SahabatPeduli/views/penyaluran.php', 'label' => 'Peta Penyaluran'],
+                    ['url' => '/SahabatPeduli/views/berita.php', 'label' => 'Artikel'],
+                    ['url' => '/SahabatPeduli/views/laporan.php', 'label' => 'Laporan Transparansi'],
                 ];
 
                 foreach ($navItems as $item):
@@ -63,7 +62,7 @@ function isActiveNav($path, $currentUri) {
                 <?php if ($isLoggedIn): ?>
                     <?php if ($userRole === 'admin'): ?>
                         <div class="relative group">
-                            <a href="/PeduliUmat/admin/index.php" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-900 text-amber-400 flex items-center justify-center shadow-md shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all duration-200" aria-label="Panel Admin">
+                            <a href="/SahabatPeduli/admin/index.php" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-900 text-amber-400 flex items-center justify-center shadow-md shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all duration-200" aria-label="Panel Admin">
                                 <i class="fa-solid fa-chart-line text-sm"></i>
                             </a>
                             <div class="absolute right-0 top-12 hidden group-hover:block bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-[11px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap z-50">
@@ -73,7 +72,7 @@ function isActiveNav($path, $currentUri) {
                     <?php endif; ?>
                     
                     <div class="relative group">
-                        <a href="/PeduliUmat/auth/logout.php" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center shadow-md shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all duration-200" aria-label="Keluar">
+                        <a href="/SahabatPeduli/auth/logout.php" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center shadow-md shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all duration-200" aria-label="Keluar">
                             <i class="fa-solid fa-right-from-bracket text-sm"></i>
                         </a>
                         <div class="absolute right-0 top-12 hidden group-hover:block bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-[11px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap z-50">
@@ -82,7 +81,7 @@ function isActiveNav($path, $currentUri) {
                     </div>
                 <?php else: ?>
                     <div class="relative group">
-                        <a href="/PeduliUmat/auth/login.php" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center shadow-md shadow-sky-500/20 hover:scale-105 active:scale-95 transition-all duration-200" aria-label="Masuk">
+                        <a href="/SahabatPeduli/auth/login.php" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center shadow-md shadow-sky-500/20 hover:scale-105 active:scale-95 transition-all duration-200" aria-label="Masuk">
                             <i class="fa-solid fa-right-to-bracket text-sm"></i>
                         </a>
                         <div class="absolute right-0 top-12 hidden group-hover:block bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-[11px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap z-50">
@@ -91,7 +90,7 @@ function isActiveNav($path, $currentUri) {
                     </div>
 
                     <div class="relative group">
-                        <a href="/PeduliUmat/auth/register.php" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-brand-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all duration-200" aria-label="Daftar">
+                        <a href="/SahabatPeduli/auth/register.php" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-brand-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all duration-200" aria-label="Daftar">
                             <i class="fa-solid fa-user-plus text-sm"></i>
                         </a>
                         <div class="absolute right-0 top-12 hidden group-hover:block bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-[11px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap z-50">
@@ -125,7 +124,7 @@ function isActiveNav($path, $currentUri) {
             <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
                 <i class="fa-solid fa-hand-holding-heart text-base"></i>
             </div>
-            <span class="font-extrabold text-slate-900 dark:text-white text-base">Peduli<span class="text-brand-600">Umat</span></span>
+            <span class="font-extrabold text-slate-900 dark:text-white text-base">Sahabat<span class="text-brand-600">Peduli</span></span>
         </div>
         <button id="mobile-close-btn" type="button" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition-all">
             <i class="fa-solid fa-xmark text-lg"></i>
@@ -135,12 +134,12 @@ function isActiveNav($path, $currentUri) {
     <div class="p-6 flex-1 overflow-y-auto space-y-1.5 font-semibold text-sm">
         <?php
         $mobileNavItems = [
-            ['url' => '/PeduliUmat/index.php', 'label' => 'Beranda', 'icon' => 'fa-house'],
-            ['url' => '/PeduliUmat/views/program.php', 'label' => 'Program Donasi', 'icon' => 'fa-hand-holding-heart'],
-            ['url' => '/PeduliUmat/views/kalkulator.php', 'label' => 'Kalkulator Zakat', 'icon' => 'fa-calculator'],
-            ['url' => '/PeduliUmat/views/penyaluran.php', 'label' => 'Peta Penyaluran', 'icon' => 'fa-map-location-dot'],
-            ['url' => '/PeduliUmat/views/berita.php', 'label' => 'Berita & Artikel', 'icon' => 'fa-newspaper'],
-            ['url' => '/PeduliUmat/views/laporan.php', 'label' => 'Laporan Transparansi', 'icon' => 'fa-file-invoice'],
+            ['url' => '/SahabatPeduli/index.php', 'label' => 'Beranda', 'icon' => 'fa-house'],
+            ['url' => '/SahabatPeduli/views/program.php', 'label' => 'Program', 'icon' => 'fa-hand-holding-heart'],
+            ['url' => '/SahabatPeduli/views/kalkulator.php', 'label' => 'Kalkulator Zakat', 'icon' => 'fa-calculator'],
+            ['url' => '/SahabatPeduli/views/penyaluran.php', 'label' => 'Peta Penyaluran', 'icon' => 'fa-map-location-dot'],
+            ['url' => '/SahabatPeduli/views/berita.php', 'label' => 'Berita & Artikel', 'icon' => 'fa-newspaper'],
+            ['url' => '/SahabatPeduli/views/laporan.php', 'label' => 'Laporan Transparansi', 'icon' => 'fa-file-invoice'],
         ];
 
         foreach ($mobileNavItems as $mItem):
@@ -159,7 +158,7 @@ function isActiveNav($path, $currentUri) {
         <?php if ($isLoggedIn): ?>
             <?php if ($userRole === 'admin'): ?>
                 <div class="relative group">
-                    <a href="/PeduliUmat/admin/index.php" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-900 text-amber-400 flex items-center justify-center shadow-md active:scale-95 transition-all" aria-label="Panel Admin">
+                    <a href="/SahabatPeduli/admin/index.php" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-800 to-slate-900 text-amber-400 flex items-center justify-center shadow-md active:scale-95 transition-all" aria-label="Panel Admin">
                         <i class="fa-solid fa-chart-line text-lg"></i>
                     </a>
                     <div class="absolute bottom-15 left-1/2 -translate-x-1/2 hidden group-hover:block bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-[11px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap z-50">
@@ -168,7 +167,7 @@ function isActiveNav($path, $currentUri) {
                 </div>
             <?php endif; ?>
             <div class="relative group">
-                <a href="/PeduliUmat/auth/logout.php" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center shadow-md active:scale-95 transition-all" aria-label="Keluar">
+                <a href="/SahabatPeduli/auth/logout.php" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center shadow-md active:scale-95 transition-all" aria-label="Keluar">
                     <i class="fa-solid fa-right-from-bracket text-lg"></i>
                 </a>
                 <div class="absolute bottom-15 left-1/2 -translate-x-1/2 hidden group-hover:block bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-[11px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap z-50">
@@ -177,7 +176,7 @@ function isActiveNav($path, $currentUri) {
             </div>
         <?php else: ?>
             <div class="relative group">
-                <a href="/PeduliUmat/auth/login.php" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-all" aria-label="Masuk">
+                <a href="/SahabatPeduli/auth/login.php" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-all" aria-label="Masuk">
                     <i class="fa-solid fa-right-to-bracket text-lg"></i>
                 </a>
                 <div class="absolute bottom-15 left-1/2 -translate-x-1/2 hidden group-hover:block bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-[11px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap z-50">
@@ -186,7 +185,7 @@ function isActiveNav($path, $currentUri) {
             </div>
 
             <div class="relative group">
-                <a href="/PeduliUmat/auth/register.php" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-brand-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-all" aria-label="Daftar Akun Baru">
+                <a href="/SahabatPeduli/auth/register.php" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-brand-600 text-white flex items-center justify-center shadow-md active:scale-95 transition-all" aria-label="Daftar Akun Baru">
                     <i class="fa-solid fa-user-plus text-lg"></i>
                 </a>
                 <div class="absolute bottom-15 left-1/2 -translate-x-1/2 hidden group-hover:block bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-[11px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap z-50">

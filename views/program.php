@@ -26,7 +26,7 @@ $campaigns = $stmt->fetchAll();
 
         <div class="text-center max-w-3xl mx-auto space-y-3">
             <span class="text-brand-600 dark:text-brand-400 font-bold text-sm uppercase tracking-wider">Program Kebaikan</span>
-            <h1 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">Program Peduli Umat</h1>
+            <h1 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">Program SahabatPeduli</h1>
             <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base">
                 Pilih program donasi yang ingin Anda dukung. Penyaluran dana dikelola secara rinci, akuntabel, dan transparan untuk mereka yang membutuhkan.
             </p>
@@ -46,7 +46,7 @@ $campaigns = $stmt->fetchAll();
                     ? 'bg-brand-600 dark:bg-brand-500 text-white shadow-md shadow-brand-500/20' 
                     : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-brand-500 dark:hover:border-brand-400 hover:text-brand-600 dark:hover:text-brand-400';
             ?>
-                <a href="/PeduliUmat/views/program.php?category=<?= $key; ?>" class="px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all <?= $active; ?>">
+                <a href="/SahabatPeduli/views/program.php?category=<?= $key; ?>" class="px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all <?= $active; ?>">
                     <?= $label; ?>
                 </a>
             <?php endforeach; ?>
@@ -70,7 +70,7 @@ $campaigns = $stmt->fetchAll();
                         
                         <div>
                             <div class="relative h-52 bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                                <img src="/PeduliUmat/uploads/campaigns/<?= htmlspecialchars($camp['image']); ?>" 
+                                <img src="/SahabatPeduli/uploads/campaigns/<?= htmlspecialchars($camp['image']); ?>" 
                                      alt="<?= htmlspecialchars($camp['title']); ?>" 
                                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                      onerror="this.src='https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=600&auto=format&fit=crop';">
@@ -106,7 +106,7 @@ $campaigns = $stmt->fetchAll();
                         </div>
 
                         <div class="p-6 pt-0">
-                            <a href="/PeduliUmat/views/donasi.php?campaign_id=<?= $camp['id']; ?>" class="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all text-center block">
+                            <a href="/SahabatPeduli/views/donasi.php?campaign_id=<?= $camp['id']; ?>" class="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all text-center block">
                                 Donasi Sekarang
                             </a>
                         </div>
