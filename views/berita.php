@@ -4,18 +4,24 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/navbar.php';
 
-$slug = $_GET['slug'] ?? null;
+$slug = isset($_GET['slug']) ? trim($_GET['slug']) : null;
 $article = null;
 
-if ($slug) {
-    $stmtDetail = $pdo->prepare("SELECT news.*, users.name as author_name FROM news LEFT JOIN users ON news.author_id = users.id WHERE news.slug = ? AND news.status = 'published'");
-    $stmtDetail->execute([$slug]);
+if (!empty($slug)) {
+    $stmtDetail = $pdo->prepare("SELECT news.*, users.name as author_name 
+                                 FROM news 
+                                 LEFT JOIN users ON news.author_id = users.id 
+                                 WHERE LOWER(TRIM(news.slug)) = LOWER(?) OR news.id = ?");
+    $stmtDetail->execute([$slug, $slug]);
     $article = $stmtDetail->fetch();
 }
 
-if (!$article) {
+if (!$article && empty($slug)) {
     $search = trim($_GET['q'] ?? '');
-    $query = "SELECT news.*, users.name as author_name FROM news LEFT JOIN users ON news.author_id = users.id WHERE news.status = 'published'";
+    $query = "SELECT news.*, users.name as author_name 
+              FROM news 
+              LEFT JOIN users ON news.author_id = users.id 
+              WHERE 1=1";
     $params = [];
 
     if (!empty($search)) {
@@ -36,7 +42,7 @@ if (!$article) {
 
         <?php if ($article): ?>
             <div class="max-w-4xl mx-auto space-y-8">
-                <a href="/SahabatPeduli/views/artikel.php" class="inline-flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors">
+                <a href="/SahabatPeduli/views/berita.php" class="inline-flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors">
                     <i class="fa-solid fa-arrow-left"></i>
                     <span>Kembali ke Daftar Artikel</span>
                 </a>
@@ -44,9 +50,9 @@ if (!$article) {
                 <div class="bg-white dark:bg-slate-800 p-6 sm:p-10 rounded-3xl border border-slate-100 dark:border-slate-700/60 shadow-xl space-y-6">
                     <div class="space-y-3">
                         <div class="flex items-center gap-4 text-xs font-semibold text-slate-400 dark:text-slate-400">
-                            <span><i class="fa-solid fa-user text-brand-600 dark:text-brand-400 mr-1.5"></i> <?= htmlspecialchars($article['author_name'] ?? 'Admin'); ?></span>
+                            <span><i class="fa-solid fa-user text-brand-600 dark:text-brand-400 mr-1.5"></i> Hamba Allah</span>
                             <span>•</span>
-                            <span><i class="fa-regular fa-calendar text-brand-600 dark:text-brand-400 mr-1.5"></i> <?= date('d M Y', strtotime($article['created_at'])); ?></span>
+                            <span><i class="fa-regular fa-calendar text-brand-600 dark:text-brand-400 mr-1.5"></i> <?= !empty($article['created_at']) ? date('d M Y', strtotime($article['created_at'])) : '-'; ?></span>
                         </div>
                         <h1 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white leading-tight">
                             <?= htmlspecialchars($article['title']); ?>
@@ -63,8 +69,25 @@ if (!$article) {
                     <?php endif; ?>
 
                     <div class="prose prose-slate dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 text-sm sm:text-base leading-relaxed space-y-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-                        <?= nl2br(htmlspecialchars($article['content'])); ?>
+                        <?= nl2br($article['content']); ?>
                     </div>
+                </div>
+            </div>
+
+        <?php elseif (!empty($slug) && !$article): ?>
+            <div class="bg-white dark:bg-slate-800 p-12 rounded-3xl border border-slate-100 dark:border-slate-700/60 shadow-sm text-center max-w-lg mx-auto space-y-4">
+                <div class="w-16 h-16 bg-red-50 dark:bg-red-950/50 text-red-500 rounded-full flex items-center justify-center mx-auto text-2xl">
+                    <i class="fa-solid fa-newspaper"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200">Artikel Tidak Ditemukan</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    Tidak dapat menemukan artikel dengan slug/ID: <code class="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-red-600 font-mono"><?= htmlspecialchars($slug); ?></code>
+                </p>
+                <div class="pt-2">
+                    <a href="/SahabatPeduli/views/berita.php" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 text-white font-bold text-xs hover:bg-brand-700 transition-colors">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Kembali ke Daftar Artikel</span>
+                    </a>
                 </div>
             </div>
 
@@ -87,7 +110,9 @@ if (!$article) {
 
                 <?php if (!empty($articles)): ?>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <?php foreach ($articles as $item): ?>
+                        <?php foreach ($articles as $item): 
+                            $itemSlug = !empty($item['slug']) ? $item['slug'] : $item['id'];
+                        ?>
                             <article class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/60 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
                                 <div>
                                     <div class="h-48 bg-slate-100 dark:bg-slate-700 overflow-hidden relative">
@@ -100,13 +125,15 @@ if (!$article) {
                                         <div class="flex items-center gap-2 text-[11px] font-semibold text-slate-400 dark:text-slate-400">
                                             <span><i class="fa-regular fa-calendar text-brand-600 dark:text-brand-400 mr-1"></i> <?= date('d M Y', strtotime($item['created_at'])); ?></span>
                                             <span>•</span>
-                                            <span>by <?= htmlspecialchars($item['author_name'] ?? 'Admin'); ?></span>
+                                            <span>by Hamba Allah</span>
                                         </div>
+                                        
                                         <h2 class="font-extrabold text-slate-900 dark:text-white text-lg group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-2">
-                                            <a href="/SahabatPeduli/views/artikel.php?slug=<?= $item['slug']; ?>">
+                                            <a href="/SahabatPeduli/views/berita.php?slug=<?= urlencode($itemSlug); ?>">
                                                 <?= htmlspecialchars($item['title']); ?>
                                             </a>
                                         </h2>
+                                        
                                         <p class="text-slate-500 dark:text-slate-400 text-xs line-clamp-3 leading-relaxed">
                                             <?= htmlspecialchars(strip_tags($item['content'])); ?>
                                         </p>
@@ -114,7 +141,7 @@ if (!$article) {
                                 </div>
 
                                 <div class="p-6 pt-0">
-                                    <a href="/SahabatPeduli/views/artikel.php?slug=<?= $item['slug']; ?>" class="inline-flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors">
+                                    <a href="/SahabatPeduli/views/berita.php?slug=<?= urlencode($itemSlug); ?>" class="inline-flex items-center gap-2 text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors">
                                         <span>Baca Selengkapnya</span>
                                         <i class="fa-solid fa-arrow-right text-[10px]"></i>
                                     </a>
@@ -128,7 +155,7 @@ if (!$article) {
                             <i class="fa-solid fa-newspaper"></i>
                         </div>
                         <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200">Tidak ada artikel ditemukan</h3>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">Artikel tidak ditemukan atau belum dipublikasikan oleh admin.</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Belum ada data berita atau artikel di database.</p>
                     </div>
                 <?php endif; ?>
             </div>

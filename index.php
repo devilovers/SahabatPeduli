@@ -4,20 +4,20 @@ require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/navbar.php';
 
-$stmtTotal = $pdo->query("SELECT SUM(amount) AS total FROM donations WHERE payment_status = 'paid'");
-$totalDonations = $stmtTotal->fetch()['total'] ?? 0;
+$stmtTotal =$pdo->query("SELECT SUM(amount) AS total FROM donations WHERE payment_status = 'paid'");
+$totalDonations =$stmtTotal->fetch()['total'] ?? 0;
 
-$stmtSpent = $pdo->query("SELECT SUM(amount_spent) AS total_spent FROM distributions");
-$totalSpent = $stmtSpent->fetch()['total_spent'] ?? 0;
+$stmtSpent =$pdo->query("SELECT SUM(amount_spent) AS total_spent FROM distributions");
+$totalSpent =$stmtSpent->fetch()['total_spent'] ?? 0;
 
-$stmtCampaigns = $pdo->query("SELECT * FROM campaigns WHERE status = 'active' ORDER BY created_at DESC LIMIT 6");
-$campaigns = $stmtCampaigns->fetchAll();
+$stmtCampaigns =$pdo->query("SELECT * FROM campaigns WHERE status = 'active' ORDER BY created_at DESC LIMIT 6");
+$campaigns =$stmtCampaigns->fetchAll();
 
-$stmtArticles = $pdo->query("SELECT news.*, users.name as author_name FROM news LEFT JOIN users ON news.author_id = users.id WHERE news.status = 'published' ORDER BY news.created_at DESC LIMIT 3");
-$articles = $stmtArticles->fetchAll();
+$stmtArticles =$pdo->query("SELECT * FROM news WHERE status = 'published' ORDER BY created_at DESC LIMIT 6");
+$articles =$stmtArticles->fetchAll();
 
-$stmtDistributions = $pdo->query("SELECT id, location_name, amount_spent, latitude, longitude, created_at FROM distributions ORDER BY created_at DESC");
-$distributions = $stmtDistributions->fetchAll();
+$stmtDistributions =$pdo->query("SELECT id, location_name, amount_spent, latitude, longitude, created_at FROM distributions ORDER BY created_at DESC");
+$distributions =$stmtDistributions->fetchAll();
 ?>
 
 <main class="flex-grow">
@@ -65,7 +65,7 @@ $distributions = $stmtDistributions->fetchAll();
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-3">
                                 <div class="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-slate-700 text-brand-600 dark:text-brand-400 flex items-center justify-center text-2xl shadow-inner">
-                                    <i class="fa-solid fa-shield-heart"></i>
+                                    <i class="fa-solid fa-layer-group"></i>
                                 </div>
                                 <div>
                                     <h3 class="font-bold text-slate-900 dark:text-white">Kategori Program</h3>
@@ -104,7 +104,7 @@ $distributions = $stmtDistributions->fetchAll();
 
                             <a href="/SahabatPeduli/views/donasi.php?type=dskl" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 hover:bg-brand-50 dark:hover:bg-slate-700/80 border border-slate-100 dark:border-slate-700 hover:border-brand-200 dark:hover:border-slate-600 transition-all text-center group">
                                 <div class="w-10 h-10 mx-auto mb-2 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg shadow-md group-hover:scale-110 transition-transform">
-                                    <i class="fa-solid fa-hand-holding-heart"></i>
+                                    <i class="fa-solid fa-globe"></i>
                                 </div>
                                 <span class="font-bold text-sm text-slate-800 dark:text-slate-200 group-hover:text-brand-700 dark:group-hover:text-brand-400 block">DSKL</span>
                                 <span class="text-[10px] text-brand-600 dark:text-brand-400 font-medium block italic">Dana Keagamaan Lain</span>
@@ -137,12 +137,25 @@ $distributions = $stmtDistributions->fetchAll();
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <?php if (!empty($campaigns)): ?>
-                    <?php foreach ($campaigns as $campaign): 
-                        $percent = $campaign['target_amount'] > 0 ? min(100, round(($campaign['collected_amount'] / $campaign['target_amount']) * 100)) : 0;
+                    <?php foreach ($campaigns as$campaign): 
+                        $percent =$campaign['target_amount'] > 0 ? min(100, round(($campaign['collected_amount'] /$campaign['target_amount']) * 100)) : 0;
+                        
+                        if (!empty($campaign['image'])) {
+                            if (preg_match('~^(https?://|/)~', $campaign['image'])) {
+                                $imgSrc =$campaign['image'];
+                            } else {
+                                $imgSrc = '/SahabatPeduli/uploads/campaigns/' .$campaign['image'];
+                            }
+                        } else {
+                            $imgSrc = 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=600&auto=format&fit=crop';
+                        }
                     ?>
                         <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
                             <div class="relative h-48 bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                                <img src="<?= htmlspecialchars($campaign['image'] ?? '/SahabatPeduli/assets/uploads/campaigns/default.jpg'); ?>" alt="<?= htmlspecialchars($campaign['title']); ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                <img src="<?= htmlspecialchars($imgSrc); ?>" 
+                                     alt="<?= htmlspecialchars($campaign['title']); ?>" 
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                     onerror="this.src='https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=600&auto=format&fit=crop';">
                                 <span class="absolute top-4 left-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-brand-700 dark:text-brand-400 shadow-sm capitalize">
                                     <?= str_replace('_', ' ', $campaign['category']); ?>
                                 </span>
@@ -202,55 +215,89 @@ $distributions = $stmtDistributions->fetchAll();
         </div>
     </section>
 
-    <section class="py-20 bg-white dark:bg-slate-900 transition-colors duration-300">
+    <section class="py-24 bg-white dark:bg-slate-900 transition-colors duration-300 overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+            
+            <div class="flex items-center justify-between pb-6 mb-8">
                 <div>
-                    <span class="text-brand-600 dark:text-brand-400 font-bold text-sm uppercase tracking-wider">Kabar Terbaru</span>
-                    <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">Berita & Artikel</h2>
+                    <span class="text-xs font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 block mb-1">
+                        Pers & Publikasi
+                    </span>
+                    <h2 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                        Berita & Artikel
+                    </h2>
                 </div>
-                <a href="/SahabatPeduli/views/berita.php" class="mt-4 md:mt-0 inline-flex items-center gap-2 font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300">
-                    <span>Lihat Semua Berita</span>
-                    <i class="fa-solid fa-arrow-right"></i>
+                <a href="/SahabatPeduli/views/berita.php" class="text-xs font-bold uppercase tracking-widest text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors flex items-center gap-2">
+                    <span>Lihat Semua</span>
+                    <i class="fa-solid fa-arrow-right-long"></i>
                 </a>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <?php if (!empty($articles)): ?>
-                    <?php foreach ($articles as $article): ?>
-                        <article class="bg-slate-50 dark:bg-slate-800/60 rounded-3xl border border-slate-100 dark:border-slate-700/60 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col">
-                            <div class="h-48 bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                                <img src="/SahabatPeduli/uploads/news/<?= htmlspecialchars($article['image']); ?>" 
-                                     alt="<?= htmlspecialchars($article['title']); ?>" 
-                                     class="w-full h-full object-cover"
-                                     onerror="this.src='https://images.unsplash.com/photo-1497633762265-9d179a990aa6?q=80&w=400&auto=format&fit=crop';">
-                            </div>
-                            <div class="p-6 flex-1 flex flex-col justify-between space-y-4">
-                                <div>
-                                    <span class="text-xs text-slate-400 dark:text-slate-400 font-medium"><i class="fa-regular fa-calendar mr-1"></i> <?= date('d M Y', strtotime($article['created_at'])); ?></span>
-                                    <h3 class="font-bold text-slate-900 dark:text-white text-lg mt-1 line-clamp-2 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
-                                        <a href="/SahabatPeduli/views/berita.php?slug=<?= $article['slug']; ?>"><?= htmlspecialchars($article['title']); ?></a>
+            <?php if (!empty($articles)): ?>
+                <div class="relative group/slider px-2">
+                    <button id="slideLeftBtn" class="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-white shadow-xl hover:bg-brand-600 hover:text-white dark:hover:bg-brand-500 transition-all flex items-center justify-center opacity-90 group-hover/slider:opacity-100 border border-slate-200 dark:border-slate-700">
+                        <i class="fa-solid fa-chevron-left text-lg"></i>
+                    </button>
+                    <button id="slideRightBtn" class="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-white shadow-xl hover:bg-brand-600 hover:text-white dark:hover:bg-brand-500 transition-all flex items-center justify-center opacity-90 group-hover/slider:opacity-100 border border-slate-200 dark:border-slate-700">
+                        <i class="fa-solid fa-chevron-right text-lg"></i>
+                    </button>
+
+                    <div id="articlesSlider" class="flex overflow-x-auto scrollbar-none snap-x snap-mandatory rounded-3xl">
+                        <?php foreach ($articles as$article): ?>
+                            <article class="flex-none w-full snap-start flex flex-col group">
+                                <div class="space-y-4">
+                                    <a href="/SahabatPeduli/views/berita.php?slug=<?= $article['slug']; ?>" class="block overflow-hidden rounded-3xl">
+                                        <img src="/SahabatPeduli/uploads/news/<?= htmlspecialchars($article['image']); ?>" 
+                                             alt="<?= htmlspecialchars($article['title']); ?>" 
+                                             class="w-full h-[400px] sm:h-[500px] object-cover filter grayscale contrast-125 group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500 ease-out"
+                                             onerror="this.src='https://images.unsplash.com/photo-1497633762265-9d179a990aa6?q=80&w=1000&auto=format&fit=crop';">
+                                    </a>
+
+                                    <div class="flex items-center gap-3 text-xs font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider pt-2">
+                                        <span class="text-brand-600 dark:text-brand-400 font-bold">Hamba Allah</span>
+                                        <span>/</span>
+                                        <time><?= date('d M Y', strtotime($article['created_at'])); ?></time>
+                                    </div>
+
+                                    <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-tight">
+                                        <a href="/SahabatPeduli/views/berita.php?slug=<?= $article['slug']; ?>" class="hover:underline decoration-brand-500 underline-offset-4">
+                                            <?= htmlspecialchars($article['title']); ?>
+                                        </a>
                                     </h3>
-                                    <p class="text-slate-500 dark:text-slate-400 text-sm mt-2 line-clamp-3">
+
+                                    <p class="text-slate-600 dark:text-slate-300 text-base line-clamp-3 leading-relaxed font-sans">
                                         <?= htmlspecialchars(strip_tags($article['content'])); ?>
                                     </p>
                                 </div>
-                                <div class="pt-4 border-t border-slate-100 dark:border-slate-700/60 flex justify-between items-center text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                    <span>Penulis: <?= htmlspecialchars($article['author_name'] ?? 'Admin'); ?></span>
-                                    <a href="/SahabatPeduli/views/berita.php?slug=<?= $article['slug']; ?>" class="text-brand-600 dark:text-brand-400 font-bold hover:underline">Baca Selengkapnya</a>
+
+                                <div class="pt-4">
+                                    <a href="/SahabatPeduli/views/berita.php?slug=<?= $article['slug']; ?>" class="text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 hover:text-slate-900 dark:hover:text-white transition-colors inline-flex items-center gap-1">
+                                        <span>Baca Laporan Selengkapnya</span>
+                                        <i class="fa-solid fa-angle-right text-[10px]"></i>
+                                    </a>
                                 </div>
-                            </div>
-                        </article>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div class="col-span-3 text-center py-12 text-slate-400 dark:text-slate-500 font-medium">
-                        Belum ada berita dipublikasikan.
+                            </article>
+                        <?php endforeach; ?>
                     </div>
-                <?php endif; ?>
-            </div>
+                </div>
+            <?php else: ?>
+                <div class="text-center py-12 text-slate-400 dark:text-slate-500 font-medium">
+                    Belum ada berita dipublikasikan.
+                </div>
+            <?php endif; ?>
         </div>
     </section>
 </main>
+
+<style>
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+</style>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -282,6 +329,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
+    }
+
+    var slider = document.getElementById('articlesSlider');
+    var btnLeft = document.getElementById('slideLeftBtn');
+    var btnRight = document.getElementById('slideRightBtn');
+
+    if (slider && btnLeft && btnRight) {
+        btnLeft.addEventListener('click', function() {
+            slider.scrollBy({ left: -slider.clientWidth, behavior: 'smooth' });
+        });
+        btnRight.addEventListener('click', function() {
+            slider.scrollBy({ left: slider.clientWidth, behavior: 'smooth' });
+        });
     }
 });
 </script>

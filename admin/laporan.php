@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../config/database.php';
 
+// Pastikan hanya admin yang dapat mengakses halaman ini
 if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
     header("Location: /SahabatPeduli/auth/login.php");
     exit;
@@ -11,6 +12,7 @@ $page_title = "Kelola Laporan Keuangan";
 $success_msg = "";
 $error_msg = "";
 
+// Proses Unggah Dokumen Laporan (PDF)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_report') {
     $title        = trim($_POST['title'] ?? '');
     $category     = trim($_POST['category'] ?? 'Laporan Keuangan');
@@ -44,12 +46,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 try {
                     $stmt = $pdo->prepare("
                         INSERT INTO public_reports 
-                        (title, category, description, report_type, report_month, report_year, file_path) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        (title, description, report_type, report_month, report_year, file_path) 
+                        VALUES (?, ?, ?, ?, ?, ?)
                     ");
                     $stmt->execute([
                         $title,
-                        $category,
                         $description,
                         $report_type,
                         $report_month,
@@ -67,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Proses Hapus Dokumen Laporan
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_report') {
     $report_id = intval($_POST['report_id'] ?? 0);
 
@@ -90,15 +92,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-$stmtReports = $pdo->query("SELECT * FROM public_reports ORDER BY created_at DESC");
-$reports = $stmtReports->fetchAll();
+// Ambil Seluruh Data Laporan
+try {
+    $stmtReports = $pdo->query("SELECT * FROM public_reports ORDER BY created_at DESC");
+    $reports = $stmtReports->fetchAll();
+} catch (Exception $e) {
+    $reports = [];
+    $error_msg = "Gagal memuat data laporan: " . $e->getMessage();
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $page_title; ?> - Admin SahabatPeduli</title>
+    <title><?= htmlspecialchars($page_title); ?> - Admin SahabatPeduli</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -125,7 +133,7 @@ $reports = $stmtReports->fetchAll();
 </head>
 <body class="bg-white dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 antialiased selection:bg-brand-500 selection:text-white min-h-screen flex flex-col transition-colors duration-300">
 
-<!-- Header Mobile Top Bar -->
+<!-- Header Seluler -->
 <header class="md:hidden sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md">
@@ -145,12 +153,12 @@ $reports = $stmtReports->fetchAll();
 
 <div class="min-h-screen flex flex-col md:flex-row relative bg-white dark:bg-slate-950">
 
+    <!-- Overlay Sidebar Seluler -->
     <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 hidden md:hidden transition-opacity"></div>
 
-    <!-- Sidebar Admin -->
+    <!-- Navigasi Sidebar -->
     <aside id="sidebarNav" class="fixed md:sticky top-0 left-0 z-50 w-72 md:w-64 h-screen bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 flex-shrink-0 flex flex-col justify-between border-r border-slate-200 dark:border-slate-800/80 -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
         <div>
-            <!-- Logo SahabatPeduli -->
             <div class="p-6 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
@@ -168,7 +176,6 @@ $reports = $stmtReports->fetchAll();
                 </button>
             </div>
 
-            <!-- Menus -->
             <nav class="p-4 space-y-1.5 text-xs font-bold">
                 <a href="/SahabatPeduli/admin/index.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
                     <i class="fa-solid fa-chart-line w-4"></i> Dashboard
@@ -208,7 +215,7 @@ $reports = $stmtReports->fetchAll();
         </div>
     </aside>
 
-    <!-- Main Content Area -->
+    <!-- Konten Utama -->
     <main class="flex-1 bg-white dark:bg-slate-950 py-8 px-4 sm:px-8 lg:px-12 overflow-y-auto space-y-8 sm:space-y-10 transition-colors duration-300">
 
         <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -234,14 +241,13 @@ $reports = $stmtReports->fetchAll();
             </div>
         <?php endif; ?>
 
-        <!-- Table Data -->
+        <!-- Tabel Laporan Keuangan -->
         <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse min-w-[600px]">
                     <thead>
                         <tr class="bg-white dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-[11px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider">
                             <th class="py-4 px-6">Nama Dokumen</th>
-                            <th class="py-4 px-6">Kategori</th>
                             <th class="py-4 px-6">Tipe & Periode</th>
                             <th class="py-4 px-6">Tanggal Unggah</th>
                             <th class="py-4 px-6 text-center">Aksi</th>
@@ -261,11 +267,6 @@ $reports = $stmtReports->fetchAll();
                                                 <span class="text-[11px] text-slate-400 dark:text-slate-500 font-mono"><?= htmlspecialchars($report['file_path']); ?></span>
                                             </div>
                                         </div>
-                                    </td>
-                                    <td class="py-4 px-6 font-bold text-brand-600 dark:text-brand-400 uppercase text-[11px]">
-                                        <span class="px-2.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/50 border border-brand-200/60 dark:border-brand-800/60 inline-block">
-                                            <?= htmlspecialchars($report['category'] ?? 'Umum'); ?>
-                                        </span>
                                     </td>
                                     <td class="py-4 px-6 font-bold text-slate-800 dark:text-slate-200">
                                         <span class="capitalize text-slate-500 dark:text-slate-400 font-normal"><?= htmlspecialchars($report['report_type'] ?? 'bulanan'); ?></span> - 
@@ -292,7 +293,7 @@ $reports = $stmtReports->fetchAll();
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="5" class="text-center py-12 text-slate-400 dark:text-slate-500 font-medium">Belum ada dokumen laporan yang diunggah.</td>
+                                <td colspan="4" class="text-center py-12 text-slate-400 dark:text-slate-500 font-medium">Belum ada dokumen laporan yang diunggah.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -303,7 +304,7 @@ $reports = $stmtReports->fetchAll();
     </main>
 </div>
 
-<!-- Modal Upload -->
+<!-- Modal Unggah Laporan -->
 <div id="modalUploadReport" class="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 dark:border-slate-800">
         <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -321,22 +322,16 @@ $reports = $stmtReports->fetchAll();
 
             <div>
                 <label class="block text-slate-700 dark:text-slate-300 mb-1">Judul Dokumen</label>
-                <input type="text" name="title" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="Contoh: Laporan Audited Keuangan Tahun 2025">
+                <input type="text" name="title" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="Contoh: Laporan Audited Keuangan Tahun 2026">
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-slate-700 dark:text-slate-300 mb-1">Kategori Dokumen</label>
-                    <input type="text" name="category" value="Laporan Keuangan" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="Misal: Keuangan / Zakat">
-                </div>
-                <div>
-                    <label class="block text-slate-700 dark:text-slate-300 mb-1">Tipe Laporan</label>
-                    <select name="report_type" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
-                        <option value="bulanan">Bulanan</option>
-                        <option value="tahunan">Tahunan</option>
-                        <option value="audit">Audit</option>
-                    </select>
-                </div>
+            <div>
+                <label class="block text-slate-700 dark:text-slate-300 mb-1">Tipe Laporan</label>
+                <select name="report_type" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
+                    <option value="bulanan">Bulanan</option>
+                    <option value="tahunan">Tahunan</option>
+                    <option value="audit">Audit</option>
+                </select>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

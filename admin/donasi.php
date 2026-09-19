@@ -2,77 +2,80 @@
 session_start();
 require_once __DIR__ . '/../config/database.php';
 
-if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? $_SESSION['user_role'] ?? '') !== 'admin') {
     header("Location: /SahabatPeduli/auth/login.php");
     exit;
 }
 
-$page_title = "Kelola Donasi";
+$page_title = "Verifikasi Donasi";
 $success_msg = "";
 $error_msg = "";
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
-    $order_id = $_POST['order_id'] ?? '';
-    $new_status = $_POST['payment_status'] ?? 'pending';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    $user_token = $_POST['csrf_token'] ?? '';
+    if (!hash_equals($_SESSION['csrf_token'], $user_token)) {
+        $error_msg = "Sesi tidak valid. Silakan coba lagi.";
+    } else {
+        $donation_id = intval($_POST['donation_id'] ?? 0);
+        $action = $_POST['action'];
 
-    try {
-        $pdo->beginTransaction();
+        try {
+            $stmtDonation = $pdo->prepare("SELECT * FROM donations WHERE id = ?");
+            $stmtDonation->execute([$donation_id]);
+            $donation = $stmtDonation->fetch();
 
-        $stmtGet = $pdo->prepare("SELECT * FROM donations WHERE order_id = ?");
-        $stmtGet->execute([$order_id]);
-        $donation = $stmtGet->fetch();
+            if ($donation) {
+                if ($action === 'approve') {
+                    $pdo->beginTransaction();
 
-        if ($donation) {
-            $old_status = $donation['payment_status'];
+                    $stmtUpdate = $pdo->prepare("UPDATE donations SET payment_status = 'success', status = 'success' WHERE id = ?");
+                    $stmtUpdate->execute([$donation_id]);
 
-            $stmtUp = $pdo->prepare("UPDATE donations SET payment_status = ? WHERE order_id = ?");
-            $stmtUp->execute([$new_status, $order_id]);
+                    if (!empty($donation['campaign_id'])) {
+                        $raw_amount = $donation['amount'];
+                        if (is_numeric($raw_amount)) {
+                            $amount = floatval($raw_amount);
+                        } else {
+                            $amount = floatval(preg_replace('/[^0-9.]/', '', (string)$raw_amount));
+                        }
 
-            if ($old_status !== 'paid' && $new_status === 'paid' && !empty($donation['campaign_id'])) {
-                $stmtCamp = $pdo->prepare("UPDATE campaigns SET collected_amount = collected_amount + ? WHERE id = ?");
-                $stmtCamp->execute([$donation['amount'], $donation['campaign_id']]);
+                        if ($amount > 0) {
+                            $stmtCampaign = $pdo->prepare("UPDATE campaigns SET current_amount = current_amount + ? WHERE id = ?");
+                            $stmtCampaign->execute([$amount, $donation['campaign_id']]);
+                        }
+                    }
+
+                    $pdo->commit();
+                    $success_msg = "Donasi kode " . htmlspecialchars($donation['order_id']) . " berhasil disetujui!";
+                } elseif ($action === 'reject') {
+                    $stmtUpdate = $pdo->prepare("UPDATE donations SET payment_status = 'failed', status = 'failed' WHERE id = ?");
+                    $stmtUpdate->execute([$donation_id]);
+
+                    $success_msg = "Donasi kode " . htmlspecialchars($donation['order_id']) . " telah ditolak.";
+                }
+            } else {
+                $error_msg = "Data donasi tidak ditemukan.";
             }
-
-            $pdo->commit();
-            $success_msg = "Status transaksi $order_id berhasil diperbarui menjadi " . strtoupper($new_status) . ".";
-        } else {
-            $pdo->rollBack();
-            $error_msg = "Transaksi tidak ditemukan.";
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $error_msg = "Gagal memproses donasi: " . $e->getMessage();
         }
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        $error_msg = "Gagal memperbarui status: " . $e->getMessage();
     }
 }
 
-$filter_status = $_GET['status'] ?? 'all';
-$search = trim($_GET['q'] ?? '');
-
-$query = "
-    SELECT d.*, u.name as user_name, c.title as campaign_title 
+$stmtDonations = $pdo->query("
+    SELECT d.*, c.title AS campaign_title 
     FROM donations d 
-    LEFT JOIN users u ON d.user_id = u.id 
     LEFT JOIN campaigns c ON d.campaign_id = c.id 
-    WHERE 1=1
-";
-$params = [];
-
-if ($filter_status !== 'all') {
-    $query .= " AND d.payment_status = ?";
-    $params[] = $filter_status;
-}
-
-if (!empty($search)) {
-    $query .= " AND (d.order_id LIKE ? OR d.display_name LIKE ? OR u.name LIKE ?)";
-    $params[] = "%{$search}%";
-    $params[] = "%{$search}%";
-    $params[] = "%{$search}%";
-}
-
-$query .= " ORDER BY d.created_at DESC";
-$stmt = $pdo->prepare($query);
-$stmt->execute($params);
-$donations = $stmt->fetchAll();
+    ORDER BY d.created_at DESC
+");
+$all_donations = $stmtDonations->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -106,7 +109,6 @@ $donations = $stmt->fetchAll();
 </head>
 <body class="bg-white dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 antialiased selection:bg-brand-500 selection:text-white min-h-screen flex flex-col transition-colors duration-300">
 
-<!-- Header Mobile Top Bar -->
 <header class="md:hidden sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md">
@@ -128,10 +130,8 @@ $donations = $stmt->fetchAll();
 
     <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 hidden md:hidden transition-opacity"></div>
 
-    <!-- Sidebar Admin -->
     <aside id="sidebarNav" class="fixed md:sticky top-0 left-0 z-50 w-72 md:w-64 h-screen bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 flex-shrink-0 flex flex-col justify-between border-r border-slate-200 dark:border-slate-800/80 -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
         <div>
-            <!-- Logo SahabatPeduli -->
             <div class="p-6 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
@@ -149,7 +149,6 @@ $donations = $stmt->fetchAll();
                 </button>
             </div>
 
-            <!-- Menus -->
             <nav class="p-4 space-y-1.5 text-xs font-bold">
                 <a href="/SahabatPeduli/admin/index.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
                     <i class="fa-solid fa-chart-line w-4"></i> Dashboard
@@ -189,14 +188,13 @@ $donations = $stmt->fetchAll();
         </div>
     </aside>
 
-    <!-- Main Content Area -->
     <main class="flex-1 bg-white dark:bg-slate-950 py-8 px-4 sm:px-8 lg:px-12 overflow-y-auto space-y-8 sm:space-y-10 transition-colors duration-300">
 
         <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-                <span class="text-brand-600 dark:text-brand-400 font-bold text-xs uppercase tracking-wider">Manajemen Transaksi</span>
+                <span class="text-brand-600 dark:text-brand-400 font-bold text-xs uppercase tracking-wider">Verifikasi & Keuangan</span>
                 <h1 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">Kelola Transaksi Donasi</h1>
-                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Verifikasi dan perbarui status pembayaran donatur SahabatPeduli.</p>
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Periksa bukti transfer dan konfirmasi status pembayaran dari donatur.</p>
             </div>
         </div>
 
@@ -212,101 +210,90 @@ $donations = $stmt->fetchAll();
             </div>
         <?php endif; ?>
 
-        <!-- Filter & Search Bar -->
-        <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex flex-wrap gap-2 w-full sm:w-auto">
-                <?php
-                $statuses = [
-                    'all' => 'Semua Status',
-                    'paid' => 'PAID (Lunas)',
-                    'pending' => 'PENDING (Menunggu)',
-                ];
-                foreach ($statuses as $stKey => $stLabel):
-                    $btnClass = ($filter_status === $stKey) 
-                        ? 'bg-brand-600 text-white font-bold shadow-md shadow-brand-600/20' 
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold';
-                ?>
-                    <a href="/SahabatPeduli/admin/donasi.php?status=<?= $stKey; ?>&q=<?= urlencode($search); ?>" class="px-4 py-2.5 rounded-xl text-xs transition-all <?= $btnClass; ?>">
-                        <?= $stLabel; ?>
-                    </a>
-                <?php endforeach; ?>
-            </div>
-
-            <form method="GET" action="" class="relative w-full sm:w-72">
-                <input type="hidden" name="status" value="<?= htmlspecialchars($filter_status); ?>">
-                <input type="text" name="q" value="<?= htmlspecialchars($search); ?>" placeholder="Cari Order ID / Donatur..." class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 dark:text-slate-500 text-xs"></i>
-            </form>
-        </div>
-
-        <!-- Data Table -->
         <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[600px]">
+                <table class="w-full text-left border-collapse min-w-[700px]">
                     <thead>
                         <tr class="bg-white dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-[11px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider">
-                            <th class="py-4 px-6">Order ID</th>
+                            <th class="py-4 px-6">Kode & Tanggal</th>
                             <th class="py-4 px-6">Donatur</th>
-                            <th class="py-4 px-6">Jenis & Program</th>
+                            <th class="py-4 px-6">Penyaluran</th>
                             <th class="py-4 px-6">Nominal</th>
-                            <th class="py-4 px-6">Status</th>
-                            <th class="py-4 px-6">Tanggal</th>
-                            <th class="py-4 px-6 text-center">Aksi Status</th>
+                            <th class="py-4 px-6">Bukti Transfer</th>
+                            <th class="py-4 px-6 text-center">Status</th>
+                            <th class="py-4 px-6 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs text-slate-700 dark:text-slate-300">
-                        <?php if (!empty($donations)): ?>
-                            <?php foreach ($donations as $don): ?>
+                        <?php if (!empty($all_donations)): ?>
+                            <?php foreach ($all_donations as $donation): 
+                                $raw_status = $donation['payment_status'] ?? $donation['status'] ?? '';
+                                $status = strtolower($raw_status);
+                            ?>
                                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                                    <td class="py-4 px-6 font-mono font-bold text-slate-900 dark:text-white"><?= htmlspecialchars($don['order_id']); ?></td>
-                                    <td class="py-4 px-6 font-bold text-slate-900 dark:text-white">
-                                        <?= htmlspecialchars($don['display_name'] ?: ($don['user_name'] ?? 'Hamba Allah')); ?>
-                                        <?php if ($don['is_anonymous']): ?>
-                                            <span class="block text-[10px] text-slate-400 dark:text-slate-500 font-normal">(Anonim)</span>
+                                    <td class="py-4 px-6">
+                                        <span class="font-bold text-slate-900 dark:text-white block"><?= htmlspecialchars($donation['order_id']); ?></span>
+                                        <span class="text-[11px] text-slate-400 dark:text-slate-500"><?= date('d M Y H:i', strtotime($donation['created_at'])); ?></span>
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <span class="font-bold text-slate-900 dark:text-white block"><?= htmlspecialchars($donation['display_name']); ?></span>
+                                        <?php if ($donation['is_anonymous']): ?>
+                                            <span class="inline-block px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-semibold mt-0.5">Anonim</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="py-4 px-6">
-                                        <span class="px-2.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300 font-bold text-[10px] uppercase tracking-wider border border-brand-200/60 dark:border-brand-800/60 inline-block">
-                                            <?= htmlspecialchars($don['type']); ?>
-                                        </span>
-                                        <?php if (!empty($don['campaign_title'])): ?>
-                                            <span class="text-[11px] text-slate-500 dark:text-slate-400 font-normal line-clamp-1 mt-1"><?= htmlspecialchars($don['campaign_title']); ?></span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="py-4 px-6 font-black text-brand-600 dark:text-brand-400 text-sm">Rp <?= number_format($don['amount'], 0, ',', '.'); ?></td>
-                                    <td class="py-4 px-6">
-                                        <?php if ($don['payment_status'] === 'paid'): ?>
-                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold text-[10px]">
-                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> PAID
+                                        <span class="font-bold text-brand-600 dark:text-brand-400 uppercase text-[11px] block"><?= htmlspecialchars($donation['type']); ?></span>
+                                        <?php if (!empty($donation['campaign_title'])): ?>
+                                            <span class="text-[11px] text-slate-400 dark:text-slate-500 line-clamp-1 max-w-[180px]" title="<?= htmlspecialchars($donation['campaign_title']); ?>">
+                                                <?= htmlspecialchars($donation['campaign_title']); ?>
                                             </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="py-4 px-6 font-black text-slate-900 dark:text-white">
+                                        Rp <?= number_format(floatval(preg_replace('/[^0-9.]/', '', (string)$donation['amount'])), 0, ',', '.'); ?>
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <?php if (!empty($donation['proof_image'])): ?>
+                                            <a href="/SahabatPeduli/<?= htmlspecialchars($donation['proof_image']); ?>" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 font-bold text-[11px] transition-all">
+                                                <i class="fa-solid fa-file-invoice"></i> Lihat Bukti
+                                            </a>
                                         <?php else: ?>
-                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold text-[10px]">
-                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> PENDING
-                                            </span>
+                                            <span class="text-slate-400 dark:text-slate-500 italic">Tidak ada</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="py-4 px-6 text-slate-400 dark:text-slate-500 font-medium"><?= date('d M Y H:i', strtotime($don['created_at'])); ?></td>
                                     <td class="py-4 px-6 text-center">
-                                        <form method="POST" action="" class="inline-flex items-center gap-1">
-                                            <input type="hidden" name="action" value="update_status">
-                                            <input type="hidden" name="order_id" value="<?= htmlspecialchars($don['order_id']); ?>">
-                                            
-                                            <?php if ($don['payment_status'] === 'pending'): ?>
-                                                <button type="submit" name="payment_status" value="paid" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] shadow-sm transition-all active:scale-95">
-                                                    Set PAID
+                                        <?php if ($status === 'success' || $status === 'disetujui'): ?>
+                                            <span class="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold text-[10px]">DISETUJUI</span>
+                                        <?php else: ?>
+                                            <span class="px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 font-bold text-[10px]">DITOLAK</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="py-4 px-6 text-center">
+                                        <div class="inline-flex items-center gap-2">
+                                            <form method="POST" action="" onsubmit="return confirm('Setujui donasi ini?');">
+                                                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
+                                                <input type="hidden" name="action" value="approve">
+                                                <input type="hidden" name="donation_id" value="<?= $donation['id']; ?>">
+                                                <button type="submit" class="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all active:scale-95 shadow-md shadow-emerald-600/20 flex items-center gap-1 px-3">
+                                                    <i class="fa-solid fa-check"></i> Terima
                                                 </button>
-                                            <?php else: ?>
-                                                <button type="submit" name="payment_status" value="pending" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-[11px] shadow-sm transition-all active:scale-95">
-                                                    Set PENDING
+                                            </form>
+
+                                            <form method="POST" action="" onsubmit="return confirm('Tolak donasi ini?');">
+                                                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
+                                                <input type="hidden" name="action" value="reject">
+                                                <input type="hidden" name="donation_id" value="<?= $donation['id']; ?>">
+                                                <button type="submit" class="p-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-all active:scale-95 shadow-md shadow-rose-600/20 flex items-center gap-1 px-3">
+                                                    <i class="fa-solid fa-xmark"></i> Tolak
                                                 </button>
-                                            <?php endif; ?>
-                                        </form>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="7" class="text-center py-12 text-slate-400 dark:text-slate-500 font-medium">Tidak ada transaksi donasi yang cocok.</td>
+                                <td colspan="7" class="text-center py-12 text-slate-400 dark:text-slate-500 font-medium">Belum ada transaksi donasi yang masuk.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
