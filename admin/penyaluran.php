@@ -14,18 +14,17 @@ $error_msg = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_distribution') {
     $location_name = trim($_POST['location_name'] ?? '');
     $category = $_POST['category'] ?? 'peduli_ekonomi';
-    $amount_spent = floatval($_POST['amount_spent'] ?? 0);
+    $raw_amount = str_replace('.', '', $_POST['amount_spent'] ?? '0');
+    $amount_spent = floatval($raw_amount);
     $beneficiaries_count = intval($_POST['beneficiaries_count'] ?? 0);
     $latitude = trim($_POST['latitude'] ?? '');
     $longitude = trim($_POST['longitude'] ?? '');
     
-    // Field Tambahan Rincian Penyaluran
     $distribution_date = $_POST['distribution_date'] ?? date('Y-m-d');
     $recipient_name = trim($_POST['recipient_name'] ?? '');
     $assistance_type = trim($_POST['assistance_type'] ?? '');
     $description = trim($_POST['description'] ?? '');
 
-    // Proses Unggah Foto Penyaluran
     $photo_path = null;
     if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
         $fileTmpPath = $_FILES['photo']['tmp_name'];
@@ -42,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
 
             $dest_path = $uploadFileDir . $newFileName;
-                if (move_uploaded_file($fileTmpPath, $dest_path)) {     
+            if (move_uploaded_file($fileTmpPath, $dest_path)) {     
                 $photo_path = 'uploads/penyaluran/' . $newFileName;
             }
         }
@@ -281,7 +280,6 @@ $distributions = $stmtDist->fetchAll();
     </main>
 </div>
 
-<!-- Modal Tambah Titik Penyaluran beserta Foto & Rincian -->
 <div id="modalCreateDist" class="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 dark:border-slate-800">
         <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -297,25 +295,21 @@ $distributions = $stmtDist->fetchAll();
         <form method="POST" action="" enctype="multipart/form-data" class="space-y-4 text-xs font-semibold">
             <input type="hidden" name="action" value="create_distribution">
 
-            <!-- Upload Foto Penyaluran -->
             <div>
                 <label class="block text-slate-700 dark:text-slate-300 mb-1">Foto Bukti Penyaluran</label>
                 <input type="file" name="photo" accept="image/*" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
             </div>
 
-            <!-- Tempat / Lokasi Penyaluran -->
             <div>
                 <label class="block text-slate-700 dark:text-slate-300 mb-1">Tempat / Nama Lokasi Penyaluran</label>
                 <input type="text" name="location_name" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="Contoh: Panti Asuhan Harapan, Banjarmasin">
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- Tanggal Penyaluran -->
                 <div>
                     <label class="block text-slate-700 dark:text-slate-300 mb-1">Tanggal Penyaluran</label>
                     <input type="date" name="distribution_date" required value="<?= date('Y-m-d'); ?>" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
                 </div>
-                <!-- Kategori -->
                 <div>
                     <label class="block text-slate-700 dark:text-slate-300 mb-1">Kategori Program</label>
                     <select name="category" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all">
@@ -328,12 +322,10 @@ $distributions = $stmtDist->fetchAll();
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- Disalurkan Kepada -->
                 <div>
                     <label class="block text-slate-700 dark:text-slate-300 mb-1">Disalurkan Kepada (Penerima)</label>
                     <input type="text" name="recipient_name" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="Anak Yatim & Dhuafa">
                 </div>
-                <!-- Jenis Bantuan -->
                 <div>
                     <label class="block text-slate-700 dark:text-slate-300 mb-1">Jenis Bantuan</label>
                     <input type="text" name="assistance_type" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="Paket Sembako / Beasiswa">
@@ -341,19 +333,16 @@ $distributions = $stmtDist->fetchAll();
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- Anggaran Disalurkan -->
                 <div>
                     <label class="block text-slate-700 dark:text-slate-300 mb-1">Anggaran Disalurkan (Rp)</label>
-                    <input type="number" name="amount_spent" required min="0" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="5000000">
+                    <input type="text" name="amount_spent" required onkeyup="formatRupiah(this)" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="5.000.000">
                 </div>
-                <!-- Jumlah Penerima -->
                 <div>
                     <label class="block text-slate-700 dark:text-slate-300 mb-1">Jumlah Penerima (Jiwa)</label>
                     <input type="number" name="beneficiaries_count" required min="1" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="50">
                 </div>
             </div>
 
-            <!-- Koordinat Peta -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-slate-700 dark:text-slate-300 mb-1">Latitude</label>
@@ -365,7 +354,6 @@ $distributions = $stmtDist->fetchAll();
                 </div>
             </div>
 
-            <!-- Deskripsi tambahan -->
             <div>
                 <label class="block text-slate-700 dark:text-slate-300 mb-1">Deskripsi Tambahan</label>
                 <textarea name="description" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="Rincian tambahan mengenai kegiatan penyerahan bantuan..."></textarea>
@@ -380,6 +368,15 @@ $distributions = $stmtDist->fetchAll();
 </div>
 
 <script>
+function formatRupiah(element) {
+    let value = element.value.replace(/[^0-9]/g, '');
+    if (value) {
+        element.value = parseInt(value, 10).toLocaleString('id-ID');
+    } else {
+        element.value = '';
+    }
+}
+
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebarNav');
     const overlay = document.getElementById('sidebarOverlay');

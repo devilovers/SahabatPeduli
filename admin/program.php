@@ -14,7 +14,8 @@ $error_msg = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_campaign') {
     $title = trim($_POST['title'] ?? '');
     $category = $_POST['category'] ?? 'peduli_ekonomi';
-    $target_amount = floatval($_POST['target_amount'] ?? 0);
+    $raw_amount = str_replace('.', '', $_POST['target_amount'] ?? '0');
+    $target_amount = floatval($raw_amount);
     $description = trim($_POST['description'] ?? '');
     $end_date = $_POST['end_date'] ?? date('Y-m-d', strtotime('+30 days'));
     
@@ -114,7 +115,6 @@ $campaigns = $stmtCampaigns->fetchAll();
 </head>
 <body class="bg-white dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 antialiased selection:bg-brand-500 selection:text-white min-h-screen flex flex-col transition-colors duration-300">
 
-<!-- Header Mobile Top Bar -->
 <header class="md:hidden sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md">
@@ -136,10 +136,8 @@ $campaigns = $stmtCampaigns->fetchAll();
 
     <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 hidden md:hidden transition-opacity"></div>
 
-    <!-- Sidebar Admin -->
     <aside id="sidebarNav" class="fixed md:sticky top-0 left-0 z-50 w-72 md:w-64 h-screen bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 flex-shrink-0 flex flex-col justify-between border-r border-slate-200 dark:border-slate-800/80 -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
         <div>
-            <!-- Logo SahabatPeduli -->
             <div class="p-6 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
@@ -157,7 +155,6 @@ $campaigns = $stmtCampaigns->fetchAll();
                 </button>
             </div>
 
-            <!-- Menus -->
             <nav class="p-4 space-y-1.5 text-xs font-bold">
                 <a href="/SahabatPeduli/admin/index.php" class="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white transition-all">
                     <i class="fa-solid fa-chart-line w-4"></i> Dashboard
@@ -197,7 +194,6 @@ $campaigns = $stmtCampaigns->fetchAll();
         </div>
     </aside>
 
-    <!-- Main Content Area -->
     <main class="flex-1 bg-white dark:bg-slate-950 py-8 px-4 sm:px-8 lg:px-12 overflow-y-auto space-y-8 sm:space-y-10 transition-colors duration-300">
 
         <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -223,7 +219,6 @@ $campaigns = $stmtCampaigns->fetchAll();
             </div>
         <?php endif; ?>
 
-        <!-- Table Data -->
         <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse min-w-[600px]">
@@ -309,7 +304,6 @@ $campaigns = $stmtCampaigns->fetchAll();
     </main>
 </div>
 
-<!-- Modal Create -->
 <div id="modalCreate" class="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 dark:border-slate-800">
         <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -342,7 +336,7 @@ $campaigns = $stmtCampaigns->fetchAll();
 
             <div>
                 <label class="block text-slate-700 dark:text-slate-300 mb-1">Target Nominal (Rp)</label>
-                <input type="number" name="target_amount" required min="100000" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="10000000">
+                <input type="text" name="target_amount" required onkeyup="formatRupiah(this)" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none transition-all" placeholder="10.000.000">
             </div>
 
             <div>
@@ -369,6 +363,15 @@ $campaigns = $stmtCampaigns->fetchAll();
 </div>
 
 <script>
+function formatRupiah(element) {
+    let value = element.value.replace(/[^0-9]/g, '');
+    if (value) {
+        element.value = parseInt(value, 10).toLocaleString('id-ID');
+    } else {
+        element.value = '';
+    }
+}
+
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebarNav');
     const overlay = document.getElementById('sidebarOverlay');

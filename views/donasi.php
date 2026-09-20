@@ -71,8 +71,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $proof_path = 'uploads/proofs/' . $newFileName;
 
                 try {
-                    $stmt = $pdo->prepare("INSERT INTO donations (order_id, user_id, type, campaign_id, amount, is_anonymous, display_name, payment_status, proof_image) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)");
-                    $stmt->execute([$order_id, $user_id, $type, $campaign_id, $amount, $is_anonymous, $display_name, $proof_path]);
+                    // Deteksi struktur kolom di tabel 'donations'
+                    $columnsQuery = $pdo->query("SHOW COLUMNS FROM donations");
+                    $existingColumns = $columnsQuery->fetchAll(PDO::FETCH_ASSOC);
+                    $columnNames = array_column($existingColumns, 'Field');
+
+                    $pkCol = 'id';
+                    $pkIsAutoIncrement = false;
+
+                    foreach ($existingColumns as $col) {
+                        if (($col['Key'] ?? '') === 'PRI') {
+                            $pkCol = $col['Field'];
+                            if (strpos(strtolower($col['Extra'] ?? ''), 'auto_increment') !== false) {
+                                $pkIsAutoIncrement = true;
+                            }
+                            break;
+                        }
+                    }
+
+                    $insertData = [];
+
+                    // Jika tidak auto increment, hitung ID baru berdasarkan MAX(ID) + 1
+                    if (!$pkIsAutoIncrement && in_array($pkCol, $columnNames)) {
+                        $maxStmt = $pdo->query("SELECT MAX(CAST({$pkCol} AS UNSIGNED)) FROM donations");
+                        $maxId = $maxStmt->fetchColumn();
+                        $nextId = ($maxId !== false && $maxId !== null) ? (intval($maxId) + 1) : 1;
+                        
+                        // Jaga-jaga jika ID terhitung sudah ada, lakukan iterasi hingga menemukan ID kosong
+                        while (true) {
+                            $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM donations WHERE {$pkCol} = ?");
+                            $checkStmt->execute([$nextId]);
+                            if ($checkStmt->fetchColumn() == 0) {
+                                break;
+                            }
+                            $nextId++;
+                        }
+                        
+                        $insertData[$pkCol] = $nextId;
+                    }
+
+                    if (in_array('order_id', $columnNames)) {
+                        $insertData['order_id'] = $order_id;
+                    }
+                    if (in_array('user_id', $columnNames)) {
+                        $insertData['user_id'] = $user_id;
+                    }
+                    if (in_array('type', $columnNames)) {
+                        $insertData['type'] = $type;
+                    }
+                    if (in_array('campaign_id', $columnNames)) {
+                        $insertData['campaign_id'] = $campaign_id;
+                    }
+                    if (in_array('amount', $columnNames)) {
+                        $insertData['amount'] = $amount;
+                    }
+                    if (in_array('is_anonymous', $columnNames)) {
+                        $insertData['is_anonymous'] = $is_anonymous;
+                    }
+                    if (in_array('display_name', $columnNames)) {
+                        $insertData['display_name'] = $display_name;
+                    }
+                    if (in_array('payment_status', $columnNames)) {
+                        $insertData['payment_status'] = 'pending';
+                    }
+                    if (in_array('proof_image', $columnNames)) {
+                        $insertData['proof_image'] = $proof_path;
+                    }
+
+                    $fields = array_keys($insertData);
+                    $placeholders = array_fill(0, count($fields), '?');
+
+                    $sql = "INSERT INTO donations (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute(array_values($insertData));
 
                     $success = "Terima kasih! Bukti transfer Anda telah berhasil diunggah. Kode Transaksi: <strong>$order_id</strong>. Admin akan melakukan verifikasi pembayaran Anda.";
                 } catch (Exception $e) {
@@ -123,7 +194,6 @@ require_once __DIR__ . '/../includes/navbar.php';
                             'zakat' => ['icon' => 'fa-coins', 'label' => 'Zakat'],
                             'infaq' => ['icon' => 'fa-hand-holding-dollar', 'label' => 'Infaq'],
                             'sedekah' => ['icon' => 'fa-box-open', 'label' => 'Sedekah'],
-                            'wakaf' => ['icon' => 'fa-building-columns', 'label' => 'Wakaf'],
                             'fidyah' => ['icon' => 'fa-utensils', 'label' => 'Fidyah'],
                             'program' => ['icon' => 'fa-folder-open', 'label' => 'Program Peduli'],
                         ];

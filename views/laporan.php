@@ -17,23 +17,31 @@ $totalIn = $financialSummary['total_in'] ?? 0;
 $totalOut = $financialSummary['total_out'] ?? 0;
 $saldo = $totalIn - $totalOut;
 
-$stmtIn = $pdo->query("SELECT id, amount, created_at FROM donations WHERE payment_status = 'paid' ORDER BY created_at DESC LIMIT 25");
+$columnsDonations = $pdo->query("SHOW COLUMNS FROM donations")->fetchAll(PDO::FETCH_COLUMN);
+$idColDonations = 'id';
+if (in_array('id_donation', $columnsDonations)) {
+    $idColDonations = 'id_donation';
+} elseif (in_array('donation_id', $columnsDonations)) {
+    $idColDonations = 'donation_id';
+} elseif (!in_array('id', $columnsDonations)) {
+    $idColDonations = $columnsDonations[0] ?? 'id';
+}
+
+$stmtIn = $pdo->query("SELECT {$idColDonations} AS id, amount, created_at FROM donations WHERE payment_status = 'paid' ORDER BY created_at DESC LIMIT 25");
 $donations = $stmtIn->fetchAll();
 
-// Pengecekan kolom dinamis pada tabel distributions untuk mencegah error SQL jika nama kolom berbeda
 $columnsDist = $pdo->query("SHOW COLUMNS FROM distributions")->fetchAll(PDO::FETCH_COLUMN);
 
-// Deteksi nama kolom Primary Key / ID
 $idColDist = 'id';
 if (in_array('id_distribution', $columnsDist)) {
     $idColDist = 'id_distribution';
+} elseif (in_array('distribution_id', $columnsDist)) {
+    $idColDist = 'distribution_id';
 } elseif (!in_array('id', $columnsDist)) {
-    // Fallback jika tidak ada kolom id standar
     $idColDist = $columnsDist[0] ?? 'id';
 }
 
-// Deteksi kolom judul/keterangan penyaluran
-$titleColDist = 'amount_spent'; // Default aman
+$titleColDist = 'amount_spent';
 if (in_array('title', $columnsDist)) {
     $titleColDist = 'title';
 } elseif (in_array('description', $columnsDist)) {
@@ -42,7 +50,6 @@ if (in_array('title', $columnsDist)) {
     $titleColDist = 'location_name';
 }
 
-// Deteksi kolom tanggal penyaluran
 $dateColDist = 'NOW()';
 if (in_array('distributed_at', $columnsDist)) {
     $dateColDist = 'distributed_at';
@@ -69,7 +76,6 @@ foreach ($donations as $d) {
 }
 
 foreach ($distributions as $dis) {
-    // Jika title_col berisi angka (misal amount_spent), beri teks default agar informatif
     $detailText = $dis['title_col'];
     if (is_numeric($detailText)) {
         $detailText = 'Penyaluran Dana Program Sosial';

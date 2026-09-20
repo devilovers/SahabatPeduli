@@ -2,7 +2,6 @@
 session_start();
 require_once __DIR__ . '/../config/database.php';
 
-// Pastikan hanya admin yang dapat mengakses halaman ini
 if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'admin') {
     header("Location: /SahabatPeduli/auth/login.php");
     exit;
@@ -12,7 +11,6 @@ $page_title = "Kelola Laporan Keuangan";
 $success_msg = "";
 $error_msg = "";
 
-// Proses Unggah Dokumen Laporan (PDF)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_report') {
     $title        = trim($_POST['title'] ?? '');
     $category     = trim($_POST['category'] ?? 'Laporan Keuangan');
@@ -49,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         (title, description, report_type, report_month, report_year, file_path) 
                         VALUES (?, ?, ?, ?, ?, ?)
                     ");
-                    $stmt->execute([
+                    $stmt.execute([
                         $title,
                         $description,
                         $report_type,
@@ -68,7 +66,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Proses Hapus Dokumen Laporan
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_report') {
     $report_id = intval($_POST['report_id'] ?? 0);
 
@@ -92,13 +89,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Ambil Seluruh Data Laporan
 try {
-    $stmtReports = $pdo->query("SELECT * FROM public_reports ORDER BY created_at DESC");
+    $stmtReports = $pdo->query("SELECT * FROM public_reports ORDER BY report_year DESC, report_month DESC");
     $reports = $stmtReports->fetchAll();
 } catch (Exception $e) {
     $reports = [];
     $error_msg = "Gagal memuat data laporan: " . $e->getMessage();
+}
+
+$stmtSummary = $pdo->query("
+    SELECT 
+        (SELECT COALESCE(SUM(amount), 0) FROM donations WHERE payment_status = 'paid') as total_in,
+        (SELECT COALESCE(SUM(amount_spent), 0) FROM distributions) as total_out
+");
+$financialSummary = $stmtSummary->fetch();
+$totalIn = $financialSummary['total_in'] ?? 0;
+$totalOut = $financialSummary['total_out'] ?? 0;
+$saldo = $totalIn - $totalOut;
+
+$columnsDonations = $pdo->query("SHOW COLUMNS FROM donations")->fetchAll(PDO::FETCH_COLUMN);
+$idColDonations = 'id';
+if (in_array('id_donation', $columnsDonations)) {
+    $idColDonations = 'id_donation';
+} elseif (in_array('donation_id', $columnsDonations)) {
+    $idColDonations = 'donation_id';
+} elseif (!in_array('id', $columnsDonations)) {
+    $idColDonations = $columnsDonations[0] ?? 'id';
+}
+
+$stmtIn = $pdo->query("SELECT {$idColDonations} AS id, amount, created_at FROM donations WHERE payment_status = 'paid' ORDER BY created_at DESC LIMIT 25");
+$donations = $stmtIn->fetchAll();
+
+$columnsDist = $pdo->query("SHOW COLUMNS FROM distributions")->fetchAll(PDO::FETCH_COLUMN);
+
+$idColDist = 'id';
+if (in_array('id_distribution', $columnsDist)) {
+    $idColDist = 'id_distribution';
+} elseif (in_array('distribution_id', $columnsDist)) {
+    $idColDist = 'distribution_id';
+} elseif (!in_array('id', $columnsDist)) {
+    $idColDist = $columnsDist[0] ?? 'id';
+}
+
+$titleColDist = 'amount_spent';
+if (in_array('title', $columnsDist)) {
+    $titleColDist = 'title';
+} elseif (in_array('description', $columnsDist)) {
+    $titleColDist = 'description';
+} elseif (in_array('location_name', $columnsDist)) {
+    $titleColDist = 'location_name';
+}
+
+$dateColDist = 'NOW()';
+if (in_array('distributed_at', $columnsDist)) {
+    $dateColDist = 'distributed_at';
+} elseif (in_array('created_at', $columnsDist)) {
+    $dateColDist = 'created_at';
+} elseif (in_array('date', $columnsDist)) {
+    $dateColDist = 'date';
+} elseif (in_array('created_date', $columnsDist)) {
+    $dateColDist = 'created_date';
+}
+
+$stmtOut = $pdo->query("SELECT {$idColDist} AS id, {$titleColDist} AS title_col, amount_spent, {$dateColDist} AS date_created FROM distributions ORDER BY {$dateColDist} DESC LIMIT 25");
+$distributions = $stmtOut->fetchAll();
+
+$transactions = [];
+
+foreach ($donations as $d) {
+    $transactions[] = [
+        'transaction_type' => 'pemasukan',
+        'transaction_date' => $d['created_at'],
+        'details'          => 'Penerimaan Donasi Online',
+        'amount'           => $d['amount']
+    ];
+}
+
+foreach ($distributions as $dis) {
+    $detailText = $dis['title_col'];
+    if (is_numeric($detailText)) {
+        $detailText = 'Penyaluran Dana Program Sosial';
+    }
+
+    $transactions[] = [
+        'transaction_type' => 'pengeluaran',
+        'transaction_date' => $dis['date_created'] ?? date('Y-m-d H:i:s'),
+        'details'          => $detailText,
+        'amount'           => $dis['amount_spent']
+    ];
+}
+
+usort($transactions, function($a, $b) {
+    return strtotime($b['transaction_date']) - strtotime($a['transaction_date']);
+});
+
+$filterType = $_GET['type'] ?? 'all';
+$searchQuery = trim($_GET['q'] ?? '');
+
+if ($filterType !== 'all') {
+    $transactions = array_filter($transactions, function($item) use ($filterType) {
+        return $item['transaction_type'] === $filterType;
+    });
+}
+
+if (!empty($searchQuery)) {
+    $transactions = array_filter($transactions, function($item) use ($searchQuery) {
+        return stripos($item['details'], $searchQuery) !== false;
+    });
 }
 ?>
 <!DOCTYPE html>
@@ -131,9 +228,8 @@ try {
         }
     </script>
 </head>
-<body class="bg-white dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 antialiased selection:bg-brand-500 selection:text-white min-h-screen flex flex-col transition-colors duration-300">
+<body class="bg-slate-50 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 antialiased selection:bg-brand-500 selection:text-white min-h-screen flex flex-col transition-colors duration-300">
 
-<!-- Header Seluler -->
 <header class="md:hidden sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md">
@@ -151,12 +247,10 @@ try {
     </div>
 </header>
 
-<div class="min-h-screen flex flex-col md:flex-row relative bg-white dark:bg-slate-950">
+<div class="min-h-screen flex flex-col md:flex-row relative bg-slate-50 dark:bg-slate-950">
 
-    <!-- Overlay Sidebar Seluler -->
     <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 hidden md:hidden transition-opacity"></div>
 
-    <!-- Navigasi Sidebar -->
     <aside id="sidebarNav" class="fixed md:sticky top-0 left-0 z-50 w-72 md:w-64 h-screen bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 flex-shrink-0 flex flex-col justify-between border-r border-slate-200 dark:border-slate-800/80 -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
         <div>
             <div class="p-6 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
@@ -215,14 +309,13 @@ try {
         </div>
     </aside>
 
-    <!-- Konten Utama -->
-    <main class="flex-1 bg-white dark:bg-slate-950 py-8 px-4 sm:px-8 lg:px-12 overflow-y-auto space-y-8 sm:space-y-10 transition-colors duration-300">
+    <main class="flex-1 bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-8 lg:px-12 overflow-y-auto space-y-8 sm:space-y-10 transition-colors duration-300">
 
         <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
                 <span class="text-brand-600 dark:text-brand-400 font-bold text-xs uppercase tracking-wider">Transparansi Publik</span>
                 <h1 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">Kelola Laporan Keuangan</h1>
-                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Unggah berkas PDF audit dan laporan keuangan untuk transparansi akuntabilitas SahabatPeduli.</p>
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Unggah berkas PDF audit dan kelola neraca arus kas transparansi SahabatPeduli.</p>
             </div>
             <button onclick="document.getElementById('modalUploadReport').classList.remove('hidden')" class="px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-lg shadow-brand-600/30 transition-all flex items-center justify-center gap-2 self-start sm:self-auto active:scale-95">
                 <i class="fa-solid fa-file-arrow-up"></i> Unggah Laporan PDF
@@ -241,59 +334,98 @@ try {
             </div>
         <?php endif; ?>
 
-        <!-- Tabel Laporan Keuangan -->
-        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+                <div class="flex items-center gap-3 text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                    <i class="fa-solid fa-arrow-down-left"></i>
+                    <span>Total Penerimaan Donasi</span>
+                </div>
+                <h3 class="text-2xl font-black text-slate-900 dark:text-white">Rp <?= number_format($totalIn, 0, ',', '.'); ?></h3>
+                <p class="text-[11px] text-slate-400 dark:text-slate-500">Total akumulasi dari seluruh donasi masuk.</p>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+                <div class="flex items-center gap-3 text-rose-500 dark:text-rose-400 text-xs font-bold uppercase tracking-wider">
+                    <i class="fa-solid fa-arrow-up-right"></i>
+                    <span>Total Penyaluran Program</span>
+                </div>
+                <h3 class="text-2xl font-black text-slate-900 dark:text-white">Rp <?= number_format($totalOut, 0, ',', '.'); ?></h3>
+                <p class="text-[11px] text-slate-400 dark:text-slate-500">Telah disalurkan ke berbagai program bantuan.</p>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+                <div class="flex items-center gap-3 text-brand-600 dark:text-brand-400 text-xs font-bold uppercase tracking-wider">
+                    <i class="fa-solid fa-vault"></i>
+                    <span>Saldo Cadangan Penyaluran</span>
+                </div>
+                <h3 class="text-2xl font-black text-brand-600 dark:text-brand-400">Rp <?= number_format($saldo, 0, ',', '.'); ?></h3>
+                <p class="text-[11px] text-slate-400 dark:text-slate-500">Siap dialokasikan untuk program mendatang.</p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-6">
+                <div>
+                    <h2 class="font-extrabold text-slate-900 dark:text-white text-xl">Rincian Arus Kas Real-Time</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Transparansi riwayat transaksi masuk dan keluar secara langsung.</p>
+                </div>
+
+                <form method="GET" action="" class="flex flex-col sm:flex-row gap-3">
+                    <div class="flex gap-2">
+                        <a href="?type=all" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all <?= $filterType === 'all' ? 'bg-brand-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' ?>">Semua</a>
+                        <a href="?type=pemasukan" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all <?= $filterType === 'pemasukan' ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' ?>">Pemasukan</a>
+                        <a href="?type=pengeluaran" class="px-3.5 py-2 rounded-xl text-xs font-bold transition-all <?= $filterType === 'pengeluaran' ? 'bg-rose-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' ?>">Pengeluaran</a>
+                    </div>
+                    
+                    <div class="relative w-full sm:w-64">
+                        <input type="text" name="q" value="<?= htmlspecialchars($searchQuery); ?>" placeholder="Cari transaksi..." class="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        <input type="hidden" name="type" value="<?= htmlspecialchars($filterType); ?>">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    </div>
+                </form>
+            </div>
+
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[600px]">
+                <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="bg-white dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-[11px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider">
-                            <th class="py-4 px-6">Nama Dokumen</th>
-                            <th class="py-4 px-6">Tipe & Periode</th>
-                            <th class="py-4 px-6">Tanggal Unggah</th>
-                            <th class="py-4 px-6 text-center">Aksi</th>
+                        <tr class="border-b border-slate-100 dark:border-slate-800 text-[11px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                            <th class="py-3 px-4">Tanggal</th>
+                            <th class="py-3 px-4">Jenis Laporan</th>
+                            <th class="py-3 px-4">Rincian Transaksi</th>
+                            <th class="py-3 px-4 text-right">Nominal</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs text-slate-700 dark:text-slate-300">
-                        <?php if (!empty($reports)): ?>
-                            <?php foreach ($reports as $report): ?>
-                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                                    <td class="py-4 px-6">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold shadow-sm border border-rose-100 dark:border-rose-900/50">
-                                                <i class="fa-solid fa-file-pdf text-lg"></i>
-                                            </div>
-                                            <div>
-                                                <h4 class="font-bold text-slate-900 dark:text-white"><?= htmlspecialchars($report['title']); ?></h4>
-                                                <span class="text-[11px] text-slate-400 dark:text-slate-500 font-mono"><?= htmlspecialchars($report['file_path']); ?></span>
-                                            </div>
-                                        </div>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs sm:text-sm">
+                        <?php if (!empty($transactions)): ?>
+                            <?php foreach ($transactions as $trans): ?>
+                                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                                    <td class="py-3.5 px-4 font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                        <?= date('d M Y, H:i', strtotime($trans['transaction_date'])); ?>
                                     </td>
-                                    <td class="py-4 px-6 font-bold text-slate-800 dark:text-slate-200">
-                                        <span class="capitalize text-slate-500 dark:text-slate-400 font-normal"><?= htmlspecialchars($report['report_type'] ?? 'bulanan'); ?></span> - 
-                                        <?= date("F", mktime(0, 0, 0, $report['report_month'] ?? 1, 10)) . ' ' . ($report['report_year'] ?? date('Y')); ?>
+                                    <td class="py-3.5 px-4 whitespace-nowrap">
+                                        <?php if ($trans['transaction_type'] === 'pemasukan'): ?>
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold">
+                                                <i class="fa-solid fa-arrow-down-left"></i> Pemasukan
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 text-[11px] font-bold">
+                                                <i class="fa-solid fa-arrow-up-right"></i> Pengeluaran
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
-                                    <td class="py-4 px-6 text-slate-400 dark:text-slate-500 font-medium">
-                                        <?= date('d M Y H:i', strtotime($report['created_at'])); ?>
+                                    <td class="py-3.5 px-4 font-semibold text-slate-800 dark:text-slate-200">
+                                        <?= htmlspecialchars($trans['details']); ?>
                                     </td>
-                                    <td class="py-4 px-6 text-center">
-                                        <div class="inline-flex items-center gap-2">
-                                            <a href="/SahabatPeduli/uploads/reports/<?= htmlspecialchars($report['file_path']); ?>" target="_blank" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition-all active:scale-95" title="Unduh/Lihat PDF">
-                                                <i class="fa-solid fa-download"></i>
-                                            </a>
-                                            <form method="POST" action="" onsubmit="return confirm('Yakin ingin menghapus dokumen laporan ini?');">
-                                                <input type="hidden" name="action" value="delete_report">
-                                                <input type="hidden" name="report_id" value="<?= $report['id']; ?>">
-                                                <button type="submit" class="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all active:scale-95" title="Hapus">
-                                                    <i class="fa-solid fa-trash-can"></i>
-                                                </button>
-                                            </form>
-                                        </div>
+                                    <td class="py-3.5 px-4 text-right font-black whitespace-nowrap <?= $trans['transaction_type'] === 'pemasukan' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'; ?>">
+                                        <?= $trans['transaction_type'] === 'pemasukan' ? '+' : '-'; ?> Rp <?= number_format($trans['amount'], 0, ',', '.'); ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="4" class="text-center py-12 text-slate-400 dark:text-slate-500 font-medium">Belum ada dokumen laporan yang diunggah.</td>
+                                <td colspan="4" class="text-center py-8 text-xs text-slate-400 dark:text-slate-500">
+                                    Tidak ada data transaksi yang ditemukan.
+                                </td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -301,10 +433,68 @@ try {
             </div>
         </div>
 
+        <div class="bg-white dark:bg-slate-900 p-6 sm:p-10 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+                <div>
+                    <h2 class="font-extrabold text-slate-900 dark:text-white text-xl">Arsip Dokumen Laporan (PDF)</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Kelola dan unduh berkas laporan bulanan serta tahunan resmi SahabatPeduli.</p>
+                </div>
+                <div class="flex gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+                        <i class="fa-solid fa-shield-check"></i> Audit WTP
+                    </span>
+                </div>
+            </div>
+
+            <?php if (!empty($reports)): ?>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <?php foreach ($reports as $item): ?>
+                        <div class="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 hover:bg-white dark:hover:bg-slate-800 hover:border-brand-300 dark:hover:border-brand-500 hover:shadow-md transition-all flex flex-col justify-between space-y-4 group">
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between text-xs text-slate-400 dark:text-slate-400 font-semibold">
+                                    <span class="bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 px-2.5 py-1 rounded-lg font-bold">
+                                        <?= strtoupper($item['report_type'] ?? 'Bulanan'); ?>
+                                    </span>
+                                    <span><?= date("F", mktime(0, 0, 0, $item['report_month'] ?? 1, 10)) . ' ' . ($item['report_year'] ?? date('Y')); ?></span>
+                                </div>
+                                <h3 class="font-bold text-slate-900 dark:text-white text-sm line-clamp-2">
+                                    <?= htmlspecialchars($item['title']); ?>
+                                </h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                                    <?= htmlspecialchars($item['description']); ?>
+                                </p>
+                            </div>
+
+                            <div class="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                <a href="/SahabatPeduli/uploads/reports/<?= htmlspecialchars($item['file_path']); ?>" download class="flex-1 py-2 rounded-xl bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-brand-600 dark:hover:bg-brand-500 hover:text-white dark:hover:text-white hover:border-brand-600 dark:hover:border-brand-500 font-bold text-xs text-slate-700 dark:text-slate-200 text-center transition-all flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-file-pdf text-red-500 group-hover:text-white"></i>
+                                    <span>Unduh</span>
+                                </a>
+                                <form method="POST" action="" onsubmit="return confirm('Yakin ingin menghapus dokumen laporan ini?');" class="inline">
+                                    <input type="hidden" name="action" value="delete_report">
+                                    <input type="hidden" name="report_id" value="<?= $item['id']; ?>">
+                                    <button type="submit" class="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all active:scale-95" title="Hapus Laporan">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="text-center py-12 space-y-3">
+                    <div class="w-16 h-16 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-full flex items-center justify-center mx-auto text-2xl">
+                        <i class="fa-solid fa-file-invoice"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">Belum ada dokumen laporan publikasi</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Gunakan tombol unggah di atas untuk menambahkan dokumen laporan baru.</p>
+                </div>
+            <?php endif; ?>
+        </div>
+
     </main>
 </div>
 
-<!-- Modal Unggah Laporan -->
 <div id="modalUploadReport" class="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 dark:border-slate-800">
         <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
